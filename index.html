@@ -956,14 +956,16 @@
     <!-- Login Overlay -->
     <div class="login-overlay" id="login-overlay">
         <div class="login-card">
-            <h2>👤 ログイン</h2>
-            <p>アシスタント名を入力してログイン</p>
+            <h2>🔒 ログイン</h2>
+            <p>名前とパスワードを入力してログイン</p>
             <div class="login-form">
-                <input type="text" id="login-input" placeholder="例：田中太郎" autocomplete="off" onkeypress="if(event.key==='Enter') handleLogin()">
-                <button class="login-btn" onclick="handleLogin()">ログイン 👉</button>
+                <input type="text" id="login-input" placeholder="名前（例：田中太郎）" autocomplete="off">
+                <input type="password" id="login-password" placeholder="パスワード" autocomplete="off" onkeypress="if(event.key==='Enter') handleLogin()" style="margin-top:8px;">
+                <div id="login-error" style="color:#ef4444; font-size:13px; margin-top:6px; display:none;"></div>
+                <button class="login-btn" onclick="handleLogin()" style="margin-top:8px;">ログイン 👉</button>
             </div>
             <div class="login-users-list" id="login-users-list" style="display:none;">
-                <p>最近使用したユーザー</p>
+                <p>最近使用したユーザー（パスワードの入力は必要です）</p>
                 <div id="recent-users"></div>
             </div>
         </div>
@@ -1522,25 +1524,69 @@
     }
 
     function initCurrentUser() {
-        currentUser = localStorage.getItem('teleapo-currentUser');
-        if (currentUser) {
+        const savedUser = localStorage.getItem('teleapo-currentUser');
+        const isAuthed = sessionStorage.getItem('teleapo-auth') === 'true';
+
+        if (savedUser && isAuthed) {
+            // 認証済み＆ユーザー名あり → 自動ログイン
+            currentUser = savedUser;
             state = loadState();
             document.getElementById('login-overlay').classList.add('hidden');
             document.getElementById('current-user-name').textContent = currentUser;
             renderUsersList();
         } else {
+            // 未認証 → ログイン画面を表示
+            currentUser = null;
             document.getElementById('login-overlay').classList.remove('hidden');
+            if (savedUser) {
+                // 名前は覚えておく（パスワードだけ入力させる）
+                document.getElementById('login-input').value = savedUser;
+            }
             renderUsersList();
         }
     }
 
-    function handleLogin() {
+    // パスワード認証（SHA-256ハッシュで照合）
+    const PASS_HASH = '3ebd2fecb9fec823493b7ce170ab307e89ef8ed86ba81ed8180b80739ed0e433';
+
+    async function sha256(text) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(text);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function handleLogin() {
         const input = document.getElementById('login-input');
+        const passInput = document.getElementById('login-password');
+        const errorEl = document.getElementById('login-error');
         const username = input.value.trim();
+        const password = passInput.value;
+
+        errorEl.style.display = 'none';
+
         if (!username) {
-            alert('名前を入力してください');
+            errorEl.textContent = '名前を入力してください';
+            errorEl.style.display = 'block';
             return;
         }
+        if (!password) {
+            errorEl.textContent = 'パスワードを入力してください';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        const hash = await sha256(password);
+        if (hash !== PASS_HASH) {
+            errorEl.textContent = 'パスワードが違います';
+            errorEl.style.display = 'block';
+            passInput.value = '';
+            return;
+        }
+
+        // 認証OK - セッションに記録
+        sessionStorage.setItem('teleapo-auth', 'true');
         loginUser(username);
     }
 
@@ -1563,6 +1609,8 @@
         document.getElementById('login-overlay').classList.add('hidden');
         document.getElementById('current-user-name').textContent = currentUser;
         document.getElementById('login-input').value = '';
+        document.getElementById('login-password').value = '';
+        document.getElementById('login-error').style.display = 'none';
 
         renderUsersList();
         renderDashboard();
@@ -1572,10 +1620,13 @@
 
     function handleLogout() {
         localStorage.removeItem('teleapo-currentUser');
+        sessionStorage.removeItem('teleapo-auth');
         currentUser = null;
         state = {};
         document.getElementById('login-overlay').classList.remove('hidden');
         document.getElementById('login-input').value = '';
+        document.getElementById('login-password').value = '';
+        document.getElementById('login-error').style.display = 'none';
         renderUsersList();
     }
 
@@ -1591,7 +1642,13 @@
                     const btn = document.createElement('button');
                     btn.className = 'login-user-btn';
                     btn.textContent = u;
-                    btn.addEventListener('click', () => loginUser(u));
+                    // 名前を自動入力 → パスワードにフォーカス
+                    btn.addEventListener('click', () => {
+                        document.getElementById('login-input').value = u;
+                        const passEl = document.getElementById('login-password');
+                        passEl.value = '';
+                        passEl.focus();
+                    });
                     listEl.appendChild(btn);
                 });
                 containerEl.style.display = 'block';
