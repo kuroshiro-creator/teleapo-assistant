@@ -1071,53 +1071,25 @@
             <p style="margin-bottom:20px; color:var(--text-secondary); font-size:14px;">自分のトーク術・成功パターンを共有しよう！チーム全体のレベルアップにつながります。</p>
 
             <!-- Script Post Form -->
-            <div class="script-post-form" style="background:var(--card); border-radius:var(--radius); padding:20px; margin-bottom:24px; box-shadow:var(--shadow);">
+            <div style="background:var(--card); border-radius:var(--radius); padding:20px; margin-bottom:24px; box-shadow:var(--shadow);">
                 <h3 style="margin-bottom:14px; font-size:16px;">✍️ スクリプトを投稿</h3>
                 <div style="margin-bottom:12px;">
                     <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">タイトル</label>
-                    <input type="text" id="script-title" placeholder="例：受付突破の鉄板フレーズ" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg); color:var(--text);">
+                    <input type="text" id="script-title" placeholder="例：木下版トークスクリプト" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg); color:var(--text);">
                 </div>
                 <div style="margin-bottom:12px;">
-                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">カテゴリ</label>
-                    <select id="script-category" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg); color:var(--text);">
-                        <option value="受付突破">受付突破</option>
-                        <option value="初回トーク">初回トーク</option>
-                        <option value="ヒアリング">ヒアリング</option>
-                        <option value="クロージング">クロージング</option>
-                        <option value="切り返し">切り返し</option>
-                        <option value="その他">その他</option>
-                    </select>
-                </div>
-                <div style="margin-bottom:12px;">
-                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">場面・状況</label>
-                    <input type="text" id="script-situation" placeholder="例：人事担当につないでもらう前の受付対応" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg); color:var(--text);">
-                </div>
-                <div style="margin-bottom:12px;">
-                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">トークスクリプト（セリフ）</label>
-                    <textarea id="script-body" rows="5" placeholder="実際に使っているセリフをそのまま書いてください。&#10;&#10;例：&#10;「お世話になります。○○の△△と申します。&#10;新卒採用のご担当者様はいらっしゃいますか？&#10;内定辞退者の再活用について、3分だけお時間いただけますか？」" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg); color:var(--text); resize:vertical; line-height:1.6;"></textarea>
+                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">トークスクリプト</label>
+                    <textarea id="script-body" rows="8" placeholder="自分のトークの流れをそのまま書いてください。&#10;&#10;例：&#10;「お世話になります。ミューズパスの木下と申します。&#10;新卒採用のご担当者様はいらっしゃいますか？&#10;内定辞退者の再活用について、3分だけお時間いただけますか？」&#10;&#10;→（相手の反応）→「ありがとうございます。実は…」" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg); color:var(--text); resize:vertical; line-height:1.7;"></textarea>
                 </div>
                 <div style="margin-bottom:16px;">
                     <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">ポイント・コツ（任意）</label>
-                    <textarea id="script-tips" rows="2" placeholder="このスクリプトを使うときのコツ、声のトーン、間の取り方など" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg); color:var(--text); resize:vertical; line-height:1.6;"></textarea>
+                    <textarea id="script-tips" rows="2" placeholder="声のトーン、間の取り方、意識していることなど" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg); color:var(--text); resize:vertical; line-height:1.6;"></textarea>
                 </div>
                 <button onclick="submitScript()" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;">投稿する 📝</button>
             </div>
 
-            <!-- Script Filters -->
-            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
-                <div class="category-chip active" onclick="filterScripts('all', this)">すべて</div>
-                <div class="category-chip" onclick="filterScripts('受付突破', this)">受付突破</div>
-                <div class="category-chip" onclick="filterScripts('初回トーク', this)">初回トーク</div>
-                <div class="category-chip" onclick="filterScripts('ヒアリング', this)">ヒアリング</div>
-                <div class="category-chip" onclick="filterScripts('クロージング', this)">クロージング</div>
-                <div class="category-chip" onclick="filterScripts('切り返し', this)">切り返し</div>
-                <div class="category-chip" onclick="filterScripts('その他', this)">その他</div>
-            </div>
-
-            <!-- Script Search -->
-            <input type="text" id="script-search" placeholder="🔍 スクリプトを検索..." oninput="renderScripts()" style="width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; margin-bottom:16px; font-size:14px; background:var(--card); color:var(--text);">
-
-            <!-- Scripts List -->
+            <!-- Shared Scripts List -->
+            <h3 style="margin-bottom:12px; font-size:16px;">📖 みんなのスクリプト</h3>
             <div id="scripts-list"></div>
         </div>
 
@@ -2201,8 +2173,6 @@
     }
 
     // ===== SCRIPTS (トークスクリプト共有) =====
-    let activeScriptFilter = 'all';
-
     function submitScript() {
         if (!currentUser) {
             alert('ログインしてください');
@@ -2210,8 +2180,6 @@
         }
 
         const title = document.getElementById('script-title').value.trim();
-        const category = document.getElementById('script-category').value;
-        const situation = document.getElementById('script-situation').value.trim();
         const body = document.getElementById('script-body').value.trim();
         const tips = document.getElementById('script-tips').value.trim();
 
@@ -2225,8 +2193,6 @@
                 id: Date.now(),
                 author: currentUser,
                 title: title,
-                category: category,
-                situation: situation,
                 body: body,
                 tips: tips,
                 likes: [],
@@ -2237,8 +2203,6 @@
 
             // Reset form
             document.getElementById('script-title').value = '';
-            document.getElementById('script-category').value = '受付突破';
-            document.getElementById('script-situation').value = '';
             document.getElementById('script-body').value = '';
             document.getElementById('script-tips').value = '';
 
@@ -2247,15 +2211,6 @@
         } catch(e) {
             console.error('Error submitting script:', e);
         }
-    }
-
-    function filterScripts(category, el) {
-        activeScriptFilter = category;
-        // Update active chip
-        const chips = el.parentElement.querySelectorAll('.category-chip');
-        chips.forEach(c => c.classList.remove('active'));
-        if (el) el.classList.add('active');
-        renderScripts();
     }
 
     function toggleLikeScript(id) {
@@ -2295,21 +2250,6 @@
     function renderScripts() {
         try {
             let scripts = JSON.parse(localStorage.getItem('teleapo-scripts') || '[]');
-            const searchQuery = (document.getElementById('script-search')?.value || '').toLowerCase();
-
-            // Filter
-            if (activeScriptFilter !== 'all') {
-                scripts = scripts.filter(s => s.category === activeScriptFilter);
-            }
-            if (searchQuery) {
-                scripts = scripts.filter(s =>
-                    s.title.toLowerCase().includes(searchQuery) ||
-                    s.body.toLowerCase().includes(searchQuery) ||
-                    s.situation.toLowerCase().includes(searchQuery) ||
-                    s.author.toLowerCase().includes(searchQuery) ||
-                    (s.tips && s.tips.toLowerCase().includes(searchQuery))
-                );
-            }
 
             // Sort newest first
             scripts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -2331,7 +2271,6 @@
                 const isOwner = s.author === currentUser;
 
                 const card = document.createElement('div');
-                card.className = 'script-card';
                 card.style.cssText = 'background:var(--card); border-radius:var(--radius); padding:20px; margin-bottom:14px; box-shadow:var(--shadow); border-left:4px solid var(--primary);';
 
                 // Header
@@ -2352,13 +2291,9 @@
                 authorSpan.textContent = '👤 ' + s.author;
                 const timeSpan = document.createElement('span');
                 timeSpan.textContent = '📅 ' + timeStr;
-                const catSpan = document.createElement('span');
-                catSpan.style.cssText = 'background:var(--primary-light); color:var(--primary); padding:1px 8px; border-radius:10px; font-weight:600;';
-                catSpan.textContent = s.category;
 
                 metaEl.appendChild(authorSpan);
                 metaEl.appendChild(timeSpan);
-                metaEl.appendChild(catSpan);
                 titleDiv.appendChild(titleEl);
                 titleDiv.appendChild(metaEl);
                 header.appendChild(titleDiv);
@@ -2374,20 +2309,6 @@
                 }
 
                 card.appendChild(header);
-
-                // Situation
-                if (s.situation) {
-                    const sitDiv = document.createElement('div');
-                    sitDiv.style.cssText = 'background:var(--bg); border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:13px;';
-                    const sitLabel = document.createElement('span');
-                    sitLabel.style.cssText = 'font-weight:600; color:var(--text-secondary);';
-                    sitLabel.textContent = '🎬 場面：';
-                    const sitText = document.createElement('span');
-                    sitText.textContent = s.situation;
-                    sitDiv.appendChild(sitLabel);
-                    sitDiv.appendChild(sitText);
-                    card.appendChild(sitDiv);
-                }
 
                 // Script Body
                 const bodyDiv = document.createElement('div');
@@ -2423,7 +2344,7 @@
                 actionDiv.style.cssText = 'display:flex; align-items:center; gap:6px;';
                 const likeBtn = document.createElement('button');
                 likeBtn.style.cssText = 'background:none; border:1px solid ' + (isLiked ? 'var(--primary)' : 'var(--border)') + '; border-radius:20px; padding:6px 14px; cursor:pointer; font-size:13px; color:' + (isLiked ? 'var(--primary)' : 'var(--text-secondary)') + '; display:flex; align-items:center; gap:4px;';
-                likeBtn.textContent = (isLiked ? '👍' : '👍') + ' 参考になった ' + (likeCount > 0 ? likeCount : '');
+                likeBtn.textContent = '👍 参考になった ' + (likeCount > 0 ? likeCount : '');
                 likeBtn.addEventListener('click', () => toggleLikeScript(s.id));
                 actionDiv.appendChild(likeBtn);
                 card.appendChild(actionDiv);
