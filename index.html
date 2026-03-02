@@ -973,6 +973,10 @@
 
         .empty-state p { font-size: 14px; }
     </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <!-- Firebase Storage は有料のため削除済み -->
 </head>
 <body>
     <!-- Login Overlay -->
@@ -1042,6 +1046,12 @@
     </div>
 
     <div class="main">
+        <!-- Firebase Setup Banner -->
+        <div id="firebase-banner" style="display:none; background:linear-gradient(135deg, #fef3c7, #fde68a); border:1px solid #f59e0b; border-radius:10px; padding:14px 18px; margin-bottom:16px; font-size:13px; color:#92400e;">
+            <strong>⚠️ Firebase未設定</strong>：チームデータ共有にはFirebase設定が必要です。管理者にFirebase設定情報を確認してください。
+            <button onclick="this.parentElement.style.display='none'" style="float:right; background:none; border:none; cursor:pointer; font-size:16px; color:#92400e;">✕</button>
+        </div>
+
         <!-- Q&A Tab -->
         <div id="tab-qa" class="tab-content active">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
@@ -1235,24 +1245,28 @@
 
             <!-- 音声ライブラリ -->
             <h3 style="margin:28px 0 10px; font-size:16px;">🎧 アポ獲得トーク音声ライブラリ</h3>
-            <p style="margin-bottom:14px; color:var(--text-secondary); font-size:13px;">実際にアポが取れた通話録音をアップロード・共有して、チーム全体でトーク力を磨こう！</p>
+            <p style="margin-bottom:14px; color:var(--text-secondary); font-size:13px;">実際にアポが取れた通話録音のリンクを共有して、チーム全体でトーク力を磨こう！</p>
+            <div style="background:var(--bg); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:12px; color:var(--text-secondary); border:1px dashed var(--border);">
+                💡 <strong>使い方</strong>：Google Drive や Dropbox に音声ファイルをアップロードし、共有リンクを下に貼り付けてください。
+                <br>※ Google Drive の場合：ファイルを右クリック →「リンクを取得」→「リンクを知っている全員」に変更 → リンクをコピー
+            </div>
 
-            <!-- Upload Form -->
+            <!-- Audio URL Form -->
             <div style="background:var(--card); border-radius:var(--radius); padding:16px; margin-bottom:16px; box-shadow:var(--shadow);">
-                <h4 style="margin-bottom:10px; font-size:14px;">🎤 音声をアップロード</h4>
+                <h4 style="margin-bottom:10px; font-size:14px;">🎤 音声リンクを共有</h4>
                 <div style="margin-bottom:8px;">
                     <label style="display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:2px;">タイトル（例：○○業界・受付突破→アポ獲得）</label>
                     <input type="text" id="audio-title" placeholder="どんな通話か簡単に" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:14px;">
                 </div>
                 <div style="margin-bottom:8px;">
+                    <label style="display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:2px;">音声URL（Google Drive / Dropbox等の共有リンク）</label>
+                    <input type="url" id="audio-url" placeholder="https://drive.google.com/file/d/..." style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:14px;">
+                </div>
+                <div style="margin-bottom:10px;">
                     <label style="display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:2px;">メモ（任意：ポイントなど）</label>
                     <textarea id="audio-memo" rows="2" placeholder="この通話で意識したこと、うまくいったポイントなど" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:13px;"></textarea>
                 </div>
-                <div style="margin-bottom:10px;">
-                    <label style="display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">音声ファイル</label>
-                    <input type="file" id="audio-file" accept="audio/*" style="font-size:13px;">
-                </div>
-                <button onclick="uploadAudio()" style="padding:8px 16px; background:var(--primary); color:white; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600;">アップロード 🎧</button>
+                <button onclick="addAudioLink()" style="padding:8px 16px; background:var(--primary); color:white; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600;">共有する 🎧</button>
             </div>
 
             <!-- Audio List -->
@@ -1306,6 +1320,104 @@
     </div>
 
     <script>
+    // ===== FIREBASE CONFIG =====
+    const firebaseConfig = {
+        apiKey: "AIzaSyAsq0TCEEv5cPNLBwICMh3HPFGSwtoXAWA",
+        authDomain: "muse-pass-insidesales-project.firebaseapp.com",
+        databaseURL: "https://muse-pass-insidesales-project-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "muse-pass-insidesales-project",
+        messagingSenderId: "671075132828",
+        appId: "1:671075132828:web:f3330ee2e49c5b42bf5459"
+    };
+
+    let firebaseReady = false;
+    let db = null;
+    try {
+        if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            firebaseReady = true;
+            console.log('Firebase initialized successfully');
+        } else {
+            console.log('Firebase not configured - using localStorage only');
+        }
+    } catch(e) {
+        console.error('Firebase init error:', e);
+    }
+
+    // ===== FIREBASE SYNC FUNCTIONS =====
+    function syncUserToFirebase() {
+        if (!firebaseReady || !db || !currentUser) return;
+        try {
+            const userData = {
+                name: currentUser,
+                records: state.records || [],
+                lastActive: new Date().toISOString()
+            };
+            db.ref('users/' + encodeURIComponent(currentUser)).set(userData);
+        } catch(e) {
+            console.error('Firebase sync error:', e);
+        }
+    }
+
+    function loadTeamFromFirebase(callback) {
+        if (!firebaseReady || !db) {
+            callback(null);
+            return;
+        }
+        db.ref('users').once('value').then(snapshot => {
+            callback(snapshot.val());
+        }).catch(e => {
+            console.error('Firebase load team error:', e);
+            callback(null);
+        });
+    }
+
+    function syncAudioToFirebase(audioItem) {
+        if (!firebaseReady || !db) return;
+        try {
+            db.ref('audio/' + audioItem.id).set({
+                id: audioItem.id,
+                title: audioItem.title,
+                memo: audioItem.memo,
+                author: audioItem.author,
+                url: audioItem.url,
+                timestamp: audioItem.timestamp
+            });
+        } catch(e) {
+            console.error('Firebase audio sync error:', e);
+        }
+    }
+
+    function deleteAudioFromFirebase(id) {
+        if (!firebaseReady || !db) return;
+        try {
+            db.ref('audio/' + id).remove();
+        } catch(e) {
+            console.error('Firebase audio delete error:', e);
+        }
+    }
+
+    function loadAudioFromFirebase(callback) {
+        if (!firebaseReady || !db) {
+            callback(null);
+            return;
+        }
+        db.ref('audio').once('value').then(snapshot => {
+            callback(snapshot.val());
+        }).catch(e => {
+            console.error('Firebase load audio error:', e);
+            callback(null);
+        });
+    }
+
+    function checkFirebaseSetup() {
+        if (!firebaseReady) {
+            const banner = document.getElementById('firebase-banner');
+            if (banner) banner.style.display = 'block';
+        }
+    }
+
     // ===== DATA（外部JSON対応: data/*.json から読み込み可能）=====
     // ※ インラインデータはフォールバック用。data/*.json を編集すればデータ管理が楽になります。
     let qaData = [
@@ -1748,6 +1860,8 @@
     function saveState() {
         if (!currentUser) return;
         try { localStorage.setItem('teleapo-user-' + currentUser, JSON.stringify(state)); } catch(e) {}
+        // Sync to Firebase
+        syncUserToFirebase();
     }
 
     function initCurrentUser() {
@@ -1833,6 +1947,9 @@
         state = loadState();
         state.fontSize = state.fontSize || 14;
 
+        // Sync to Firebase
+        syncUserToFirebase();
+
         document.getElementById('login-overlay').classList.add('hidden');
         document.getElementById('current-user-name').textContent = currentUser;
         document.getElementById('login-input').value = '';
@@ -1844,6 +1961,9 @@
         renderTeam();
         renderScripts();
         renderComments();
+
+        // Check Firebase setup
+        checkFirebaseSetup();
     }
 
     function handleLogout() {
@@ -2684,28 +2804,67 @@
     // ===== TEAM DASHBOARD =====
     function renderTeam() {
         try {
-            let users = JSON.parse(localStorage.getItem('teleapo-users') || '[]');
             const summaryEl = document.getElementById('team-summary');
             const dailyLogEl = document.getElementById('team-daily-log');
 
-            if (users.length === 0) {
-                if (summaryEl) summaryEl.innerHTML = '';
-                if (dailyLogEl) dailyLogEl.innerHTML = '';
-                document.getElementById('team-tbody').innerHTML = `
-                    <tr><td colspan="6" style="text-align:center; padding:40px 20px;">
-                        <div class="empty-state">
-                            <div class="emoji">👥</div>
-                            <p>チームメンバーがまだいません。ログインしたユーザーがここに表示されます。</p>
-                        </div>
-                    </td></tr>
-                `;
-                return;
+            // Try Firebase first, fall back to localStorage
+            if (firebaseReady && db) {
+                loadTeamFromFirebase(function(firebaseData) {
+                    renderTeamWithData(firebaseData, summaryEl, dailyLogEl);
+                });
+            } else {
+                renderTeamWithData(null, summaryEl, dailyLogEl);
             }
+        } catch(e) {
+            console.error('Error rendering team:', e);
+        }
+    }
 
-            let teamStats = [];
-            let totals = { calls: 0, connects: 0, appointments: 0 };
-            let allRecords = []; // 全メンバーの日別記録
+    function renderTeamWithData(firebaseData, summaryEl, dailyLogEl) {
+        let teamStats = [];
+        let totals = { calls: 0, connects: 0, appointments: 0 };
+        let allRecords = [];
+        let userNames = [];
 
+        if (firebaseData) {
+            // Use Firebase data
+            Object.keys(firebaseData).forEach(key => {
+                try {
+                    const userData = firebaseData[key];
+                    const userName = userData.name || decodeURIComponent(key);
+                    userNames.push(userName);
+                    const records = userData.records || [];
+
+                    let totalCalls = records.reduce((sum, r) => sum + (r.calls || 0), 0);
+                    let totalConnects = records.reduce((sum, r) => sum + (r.connects || 0), 0);
+                    let totalAppointments = records.reduce((sum, r) => sum + (r.appointments || 0), 0);
+
+                    let connectRate = totalCalls > 0 ? ((totalConnects / totalCalls) * 100).toFixed(1) : 0;
+                    let appointmentRate = totalConnects > 0 ? ((totalAppointments / totalConnects) * 100).toFixed(1) : 0;
+
+                    teamStats.push({
+                        name: userName,
+                        calls: totalCalls,
+                        connects: totalConnects,
+                        appointments: totalAppointments,
+                        connectRate: connectRate,
+                        appointmentRate: appointmentRate,
+                        lastActive: userData.lastActive || ''
+                    });
+
+                    totals.calls += totalCalls;
+                    totals.connects += totalConnects;
+                    totals.appointments += totalAppointments;
+
+                    records.forEach(r => {
+                        allRecords.push({ ...r, user: userName });
+                    });
+                } catch(e) {}
+            });
+        } else {
+            // Fallback to localStorage
+            let users = JSON.parse(localStorage.getItem('teleapo-users') || '[]');
+            userNames = users;
             users.forEach(user => {
                 try {
                     let userData = JSON.parse(localStorage.getItem('teleapo-user-' + user) || '{}');
@@ -2730,153 +2889,150 @@
                     totals.connects += totalConnects;
                     totals.appointments += totalAppointments;
 
-                    // 各レコードにユーザー名を付与
                     records.forEach(r => {
                         allRecords.push({ ...r, user: user });
                     });
                 } catch(e) {}
             });
-
-            // ===== チーム合計サマリーカード =====
-            if (summaryEl) {
-                let totalConnectRate = totals.calls > 0 ? ((totals.connects / totals.calls) * 100).toFixed(1) : '0.0';
-                let totalApoRate = totals.connects > 0 ? ((totals.appointments / totals.connects) * 100).toFixed(1) : '0.0';
-                summaryEl.innerHTML = `
-                    <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-number">${users.length}人</div><div class="stat-label">メンバー数</div></div>
-                    <div class="stat-card"><div class="stat-icon">📞</div><div class="stat-number">${totals.calls}</div><div class="stat-label">チーム累計架電</div></div>
-                    <div class="stat-card"><div class="stat-icon">🗣️</div><div class="stat-number">${totals.connects}</div><div class="stat-label">チーム累計通話</div></div>
-                    <div class="stat-card"><div class="stat-icon">🎯</div><div class="stat-number">${totals.appointments}</div><div class="stat-label">チーム累計アポ</div></div>
-                    <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-number">${totalConnectRate}%</div><div class="stat-label">チーム接続率</div></div>
-                    <div class="stat-card"><div class="stat-icon">🏅</div><div class="stat-number">${totalApoRate}%</div><div class="stat-label">チームアポ率</div></div>
-                `;
-            }
-
-            // ===== メンバー別テーブル =====
-            teamStats.sort((a, b) => b.appointmentRate - a.appointmentRate);
-
-            let html = teamStats.map(stat => {
-                let isCurrentUser = stat.name === currentUser ? ' current-user' : '';
-                return `<tr class="${isCurrentUser}">
-                    <td><strong>${escapeHTML(stat.name)}</strong></td>
-                    <td>${stat.calls}</td>
-                    <td>${stat.connects}</td>
-                    <td>${stat.appointments}</td>
-                    <td>${stat.connectRate}%</td>
-                    <td>${stat.appointmentRate}%</td>
-                </tr>`;
-            }).join('');
-
-            let totalConnectRate = totals.calls > 0 ? ((totals.connects / totals.calls) * 100).toFixed(1) : 0;
-            let totalAppointmentRate = totals.connects > 0 ? ((totals.appointments / totals.connects) * 100).toFixed(1) : 0;
-
-            html += `<tr class="summary">
-                <td>🎯 チーム合計</td>
-                <td>${totals.calls}</td>
-                <td>${totals.connects}</td>
-                <td>${totals.appointments}</td>
-                <td>${totalConnectRate}%</td>
-                <td>${totalAppointmentRate}%</td>
-            </tr>`;
-
-            document.getElementById('team-tbody').innerHTML = html;
-
-            // ===== 日別チーム活動ログ =====
-            if (dailyLogEl) {
-                allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
-                const recentRecords = allRecords.slice(0, 30); // 直近30件
-
-                if (recentRecords.length === 0) {
-                    dailyLogEl.innerHTML = '<div class="empty-state"><div class="emoji">📅</div><p>まだ記録がありません</p></div>';
-                } else {
-                    dailyLogEl.innerHTML = recentRecords.map(r => `
-                        <div style="background:var(--card); border-radius:8px; padding:12px 16px; margin-bottom:8px; box-shadow:var(--shadow); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                            <div>
-                                <span style="font-weight:600; color:var(--primary);">${escapeHTML(r.user)}</span>
-                                <span style="font-size:12px; color:var(--text-secondary); margin-left:8px;">${escapeHTML(r.date)}</span>
-                            </div>
-                            <div style="display:flex; gap:12px; font-size:13px;">
-                                <span>📞 ${r.calls || 0}</span>
-                                <span>🗣️ ${r.connects || 0}</span>
-                                <span>🎯 ${r.appointments || 0}</span>
-                            </div>
-                            ${r.memo ? `<div style="width:100%; font-size:12px; color:var(--text-secondary); border-top:1px solid var(--border); padding-top:6px; margin-top:2px;">💡 ${escapeHTML(r.memo)}</div>` : ''}
-                        </div>
-                    `).join('');
-                }
-            }
-
-            // ===== 音声ライブラリ =====
-            renderAudioList();
-
-        } catch(e) {
-            console.error('Error rendering team:', e);
         }
+
+        if (userNames.length === 0) {
+            if (summaryEl) summaryEl.innerHTML = '';
+            if (dailyLogEl) dailyLogEl.innerHTML = '';
+            document.getElementById('team-tbody').innerHTML = `
+                <tr><td colspan="6" style="text-align:center; padding:40px 20px;">
+                    <div class="empty-state">
+                        <div class="emoji">👥</div>
+                        <p>チームメンバーがまだいません。ログインしたユーザーがここに表示されます。</p>
+                    </div>
+                </td></tr>
+            `;
+            return;
+        }
+
+        // Team summary cards
+        if (summaryEl) {
+            let totalConnectRate = totals.calls > 0 ? ((totals.connects / totals.calls) * 100).toFixed(1) : '0.0';
+            let totalApoRate = totals.connects > 0 ? ((totals.appointments / totals.connects) * 100).toFixed(1) : '0.0';
+            summaryEl.innerHTML = `
+                <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-number">${userNames.length}人</div><div class="stat-label">メンバー数</div></div>
+                <div class="stat-card"><div class="stat-icon">📞</div><div class="stat-number">${totals.calls}</div><div class="stat-label">チーム累計架電</div></div>
+                <div class="stat-card"><div class="stat-icon">🗣️</div><div class="stat-number">${totals.connects}</div><div class="stat-label">チーム累計通話</div></div>
+                <div class="stat-card"><div class="stat-icon">🎯</div><div class="stat-number">${totals.appointments}</div><div class="stat-label">チーム累計アポ</div></div>
+                <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-number">${totalConnectRate}%</div><div class="stat-label">チーム接続率</div></div>
+                <div class="stat-card"><div class="stat-icon">🏅</div><div class="stat-number">${totalApoRate}%</div><div class="stat-label">チームアポ率</div></div>
+            `;
+        }
+
+        // Member table
+        teamStats.sort((a, b) => b.appointmentRate - a.appointmentRate);
+        let html = teamStats.map(stat => {
+            let isCurrentUser = stat.name === currentUser ? ' current-user' : '';
+            return `<tr class="${isCurrentUser}">
+                <td><strong>${escapeHTML(stat.name)}</strong></td>
+                <td>${stat.calls}</td>
+                <td>${stat.connects}</td>
+                <td>${stat.appointments}</td>
+                <td>${stat.connectRate}%</td>
+                <td>${stat.appointmentRate}%</td>
+            </tr>`;
+        }).join('');
+
+        let totalConnectRate = totals.calls > 0 ? ((totals.connects / totals.calls) * 100).toFixed(1) : 0;
+        let totalAppointmentRate = totals.connects > 0 ? ((totals.appointments / totals.connects) * 100).toFixed(1) : 0;
+        html += `<tr class="summary">
+            <td>🎯 チーム合計</td>
+            <td>${totals.calls}</td>
+            <td>${totals.connects}</td>
+            <td>${totals.appointments}</td>
+            <td>${totalConnectRate}%</td>
+            <td>${totalAppointmentRate}%</td>
+        </tr>`;
+
+        document.getElementById('team-tbody').innerHTML = html;
+
+        // Daily activity log
+        if (dailyLogEl) {
+            allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const recentRecords = allRecords.slice(0, 30);
+
+            if (recentRecords.length === 0) {
+                dailyLogEl.innerHTML = '<div class="empty-state"><div class="emoji">📅</div><p>まだ記録がありません</p></div>';
+            } else {
+                dailyLogEl.innerHTML = recentRecords.map(r => `
+                    <div style="background:var(--card); border-radius:8px; padding:12px 16px; margin-bottom:8px; box-shadow:var(--shadow); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <div>
+                            <span style="font-weight:600; color:var(--primary);">${escapeHTML(r.user)}</span>
+                            <span style="font-size:12px; color:var(--text-secondary); margin-left:8px;">${escapeHTML(r.date)}</span>
+                        </div>
+                        <div style="display:flex; gap:12px; font-size:13px;">
+                            <span>📞 ${r.calls || 0}</span>
+                            <span>🗣️ ${r.connects || 0}</span>
+                            <span>🎯 ${r.appointments || 0}</span>
+                        </div>
+                        ${r.memo ? `<div style="width:100%; font-size:12px; color:var(--text-secondary); border-top:1px solid var(--border); padding-top:6px; margin-top:2px;">💡 ${escapeHTML(r.memo)}</div>` : ''}
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Audio library
+        renderAudioList();
     }
 
-    // ===== AUDIO LIBRARY =====
-    function uploadAudio() {
+    // ===== AUDIO LIBRARY (URL共有方式) =====
+    function addAudioLink() {
         if (!currentUser) { alert('ログインしてください'); return; }
 
         const title = document.getElementById('audio-title').value.trim();
+        const url = document.getElementById('audio-url').value.trim();
         const memo = document.getElementById('audio-memo').value.trim();
-        const fileInput = document.getElementById('audio-file');
 
         if (!title) { alert('タイトルを入力してください'); return; }
-        if (!fileInput.files || !fileInput.files[0]) { alert('音声ファイルを選択してください'); return; }
-
-        const file = fileInput.files[0];
-        if (!file.type.startsWith('audio/')) {
-            alert('音声ファイルのみアップロードできます');
+        if (!url) { alert('音声URLを入力してください'); return; }
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            alert('有効なURL（https://...）を入力してください');
             return;
         }
 
-        // 10MB制限（localStorage容量対策）
-        if (file.size > 10 * 1024 * 1024) {
-            alert('ファイルサイズは10MB以下にしてください');
-            return;
+        try {
+            const newAudio = {
+                id: Date.now(),
+                title: title,
+                url: url,
+                memo: memo,
+                author: currentUser,
+                timestamp: new Date().toISOString()
+            };
+
+            // localStorage にも保存（フォールバック用）
+            let audioLib = JSON.parse(localStorage.getItem('teleapo-audio-library') || '[]');
+            audioLib.push(newAudio);
+            localStorage.setItem('teleapo-audio-library', JSON.stringify(audioLib));
+
+            // Firebase に同期
+            syncAudioToFirebase(newAudio);
+
+            // Reset
+            document.getElementById('audio-title').value = '';
+            document.getElementById('audio-url').value = '';
+            document.getElementById('audio-memo').value = '';
+
+            renderAudioList();
+            alert('音声リンクを共有しました！ 🎧');
+        } catch(e) {
+            console.error('Error adding audio link:', e);
+            alert('保存に失敗しました。');
         }
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                let audioLib = JSON.parse(localStorage.getItem('teleapo-audio-library') || '[]');
-                audioLib.push({
-                    id: Date.now(),
-                    title: title,
-                    memo: memo,
-                    author: currentUser,
-                    fileName: file.name,
-                    fileType: file.type,
-                    data: e.target.result,
-                    timestamp: new Date().toISOString()
-                });
-                localStorage.setItem('teleapo-audio-library', JSON.stringify(audioLib));
-
-                // Reset
-                document.getElementById('audio-title').value = '';
-                document.getElementById('audio-memo').value = '';
-                fileInput.value = '';
-
-                renderAudioList();
-                alert('音声をアップロードしました！ 🎧');
-            } catch(err) {
-                if (err.name === 'QuotaExceededError' || err.message.includes('quota')) {
-                    alert('ストレージ容量が不足しています。古い音声を削除してからアップロードしてください。');
-                } else {
-                    console.error('Error uploading audio:', err);
-                    alert('アップロードに失敗しました。ファイルサイズを小さくしてお試しください。');
-                }
-            }
-        };
-        reader.readAsDataURL(file);
     }
 
     function deleteAudio(id) {
-        if (!confirm('この音声を削除しますか？')) return;
+        if (!confirm('この音声リンクを削除しますか？')) return;
         try {
             let audioLib = JSON.parse(localStorage.getItem('teleapo-audio-library') || '[]');
             audioLib = audioLib.filter(a => a.id !== id);
             localStorage.setItem('teleapo-audio-library', JSON.stringify(audioLib));
+            deleteAudioFromFirebase(id);
             renderAudioList();
         } catch(e) {
             console.error('Error deleting audio:', e);
@@ -2887,44 +3043,61 @@
         const el = document.getElementById('audio-list');
         if (!el) return;
 
+        if (firebaseReady && db) {
+            loadAudioFromFirebase(function(firebaseAudio) {
+                if (firebaseAudio) {
+                    let audioList = Object.values(firebaseAudio);
+                    audioList.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                    renderAudioListUI(el, audioList);
+                } else {
+                    renderAudioListLocal(el);
+                }
+            });
+        } else {
+            renderAudioListLocal(el);
+        }
+    }
+
+    function renderAudioListLocal(el) {
         try {
             let audioLib = JSON.parse(localStorage.getItem('teleapo-audio-library') || '[]');
             audioLib.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-            if (audioLib.length === 0) {
-                el.innerHTML = '<div class="empty-state"><div class="emoji">🎧</div><p>まだ音声がアップロードされていません。アポ獲得時の通話録音を共有してみましょう！</p></div>';
-                return;
-            }
-
-            el.innerHTML = audioLib.map(a => {
-                const date = new Date(a.timestamp);
-                const dateStr = date.toLocaleDateString('ja-JP') + ' ' + date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-                const isOwner = a.author === currentUser;
-                return `
-                <div style="background:var(--card); border-radius:var(--radius); padding:16px; margin-bottom:12px; box-shadow:var(--shadow); border-left:4px solid var(--success);">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-                        <div>
-                            <h4 style="font-size:15px; margin-bottom:4px;">${escapeHTML(a.title)}</h4>
-                            <div style="font-size:12px; color:var(--text-secondary); display:flex; gap:10px;">
-                                <span>👤 ${escapeHTML(a.author)}</span>
-                                <span>📅 ${dateStr}</span>
-                                <span>📁 ${escapeHTML(a.fileName)}</span>
-                            </div>
-                        </div>
-                        ${isOwner ? `<button onclick="deleteAudio(${a.id})" style="background:none; border:none; font-size:14px; cursor:pointer; opacity:0.5; padding:4px;" title="削除">🗑️</button>` : ''}
-                    </div>
-                    ${a.memo ? `<div style="font-size:13px; color:var(--text-secondary); margin-bottom:10px; padding:8px; background:var(--bg); border-radius:6px;">💡 ${escapeHTML(a.memo)}</div>` : ''}
-                    <audio controls style="width:100%; height:40px;" preload="none">
-                        <source src="${a.data}" type="${a.fileType}">
-                        お使いのブラウザは音声再生に対応していません。
-                    </audio>
-                </div>
-                `;
-            }).join('');
+            renderAudioListUI(el, audioLib);
         } catch(e) {
             console.error('Error rendering audio list:', e);
             el.innerHTML = '';
         }
+    }
+
+    function renderAudioListUI(el, audioLib) {
+        if (audioLib.length === 0) {
+            el.innerHTML = '<div class="empty-state"><div class="emoji">🎧</div><p>まだ音声リンクが共有されていません。アポ獲得時の通話録音リンクを共有してみましょう！</p></div>';
+            return;
+        }
+
+        el.innerHTML = audioLib.map(a => {
+            const date = new Date(a.timestamp);
+            const dateStr = date.toLocaleDateString('ja-JP') + ' ' + date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+            const isOwner = a.author === currentUser;
+            return `
+            <div style="background:var(--card); border-radius:var(--radius); padding:16px; margin-bottom:12px; box-shadow:var(--shadow); border-left:4px solid var(--success);">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                    <div>
+                        <h4 style="font-size:15px; margin-bottom:4px;">🎧 ${escapeHTML(a.title)}</h4>
+                        <div style="font-size:12px; color:var(--text-secondary); display:flex; gap:10px; flex-wrap:wrap;">
+                            <span>👤 ${escapeHTML(a.author)}</span>
+                            <span>📅 ${dateStr}</span>
+                        </div>
+                    </div>
+                    ${isOwner ? `<button onclick="deleteAudio(${a.id})" style="background:none; border:none; font-size:14px; cursor:pointer; opacity:0.5; padding:4px;" title="削除">🗑️</button>` : ''}
+                </div>
+                ${a.memo ? `<div style="font-size:13px; color:var(--text-secondary); margin-bottom:10px; padding:8px; background:var(--bg); border-radius:6px;">💡 ${escapeHTML(a.memo)}</div>` : ''}
+                <a href="${escapeHTML(a.url)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:6px; padding:10px 16px; background:var(--primary); color:white; border-radius:8px; text-decoration:none; font-size:13px; font-weight:600;">
+                    ▶️ 音声を聴く（外部リンク）
+                </a>
+            </div>
+            `;
+        }).join('');
     }
 
     // ===== SCRIPTS (トークスクリプト共有) =====
