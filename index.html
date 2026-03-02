@@ -1867,14 +1867,16 @@
 
     function filterQA() {
         const query = document.getElementById('qa-search').value.toLowerCase();
-        // 既存データに編集上書きを適用
+        // 既存データに編集上書きを適用、削除済みを除外
         const qaEdits = JSON.parse(localStorage.getItem('teleapo-qa-edits') || '{}');
+        const qaDeleted = JSON.parse(localStorage.getItem('teleapo-qa-deleted') || '[]');
         let allQA = qaData.map((q, idx) => {
+            if (qaDeleted.includes(idx)) return null;
             if (qaEdits[idx]) {
                 return { ...q, ...qaEdits[idx], _builtinIdx: idx };
             }
             return { ...q, _builtinIdx: idx };
-        });
+        }).filter(q => q !== null);
         // カスタム追加分をマージ
         try {
             const customQA = JSON.parse(localStorage.getItem('teleapo-custom-qa') || '[]');
@@ -1901,7 +1903,7 @@
         el.innerHTML = data.map((q, idx) => {
             const isBuiltin = q._builtinIdx !== undefined;
             const itemKey = isBuiltin ? 'builtin-' + q._builtinIdx : 'custom-' + q.customId;
-            const deleteCall = q.customId ? `deleteQAItem(${q.customId})` : '';
+            const deleteCall = isBuiltin ? `deleteBuiltinQA(${q._builtinIdx})` : (q.customId ? `deleteQAItem(${q.customId})` : '');
             return `
             <div class="qa-card" id="qa-item-${itemKey}">
                 <div class="qa-question" style="display:flex; justify-content:space-between; align-items:center; gap:8px; cursor:pointer;" onclick="toggleQA(this.parentElement, ${idx})">
@@ -1911,7 +1913,7 @@
                     </div>
                     <div style="display:flex; gap:4px;">
                         <button onclick="event.stopPropagation(); startQAInlineEdit('${itemKey}', ${isBuiltin ? q._builtinIdx : -1}, ${q.customId || 0});" style="background:none; border:none; font-size:14px; cursor:pointer; padding:4px;" title="編集">✏️</button>
-                        ${deleteCall ? `<button onclick="event.stopPropagation(); ${deleteCall};" style="background:none; border:none; font-size:14px; cursor:pointer; padding:4px;" title="削除">🗑️</button>` : ''}
+                        <button onclick="event.stopPropagation(); ${deleteCall};" style="background:none; border:none; font-size:14px; cursor:pointer; padding:4px;" title="削除">🗑️</button>
                         <span class="qa-toggle">▼</span>
                     </div>
                 </div>
@@ -2034,14 +2036,16 @@
 
     function renderDig() {
         const el = document.getElementById('dig-list');
-        // 既存データに編集上書きを適用
+        // 既存データに編集上書きを適用、削除済みを除外
         const digEdits = JSON.parse(localStorage.getItem('teleapo-dig-edits') || '{}');
+        const digDeleted = JSON.parse(localStorage.getItem('teleapo-dig-deleted') || '[]');
         let allDig = digData.map((d, idx) => {
+            if (digDeleted.includes(idx)) return null;
             if (digEdits[idx]) {
                 return { ...d, ...digEdits[idx], _builtinIdx: idx };
             }
             return { ...d, _builtinIdx: idx };
-        });
+        }).filter(d => d !== null);
         // カスタム追加分をマージ
         try {
             const customDig = JSON.parse(localStorage.getItem('teleapo-custom-dig') || '[]');
@@ -2053,7 +2057,7 @@
         allDig.forEach((d, i) => {
             const isBuiltin = d._builtinIdx !== undefined;
             const itemKey = isBuiltin ? 'builtin-' + d._builtinIdx : 'custom-' + d.customId;
-            const deleteCall = d.customId ? `deleteDigItem(${d.customId})` : '';
+            const deleteCall = isBuiltin ? `deleteBuiltinDig(${d._builtinIdx})` : (d.customId ? `deleteDigItem(${d.customId})` : '');
 
             html += `
                 <div class="dig-card" id="dig-item-${itemKey}">
@@ -2063,7 +2067,7 @@
                         </div>
                         <div style="display:flex; gap:4px;">
                             <button onclick="event.stopPropagation(); startDigInlineEdit('${itemKey}', ${isBuiltin ? d._builtinIdx : -1}, ${d.customId || 0});" style="background:none; border:none; font-size:14px; cursor:pointer; padding:4px;" title="編集">✏️</button>
-                            ${deleteCall ? `<button onclick="event.stopPropagation(); ${deleteCall};" style="background:none; border:none; font-size:14px; cursor:pointer; padding:4px;" title="削除">🗑️</button>` : ''}
+                            <button onclick="event.stopPropagation(); ${deleteCall};" style="background:none; border:none; font-size:14px; cursor:pointer; padding:4px;" title="削除">🗑️</button>
                             <span class="qa-toggle">▼</span>
                         </div>
                     </div>
@@ -2173,14 +2177,16 @@
 
     function renderObjections() {
         const el = document.getElementById('objection-list');
-        // 既存データに編集上書きを適用
+        // 既存データに編集上書きを適用、削除済みを除外
         const objEdits = JSON.parse(localStorage.getItem('teleapo-objection-edits') || '{}');
+        const objDeleted = JSON.parse(localStorage.getItem('teleapo-objection-deleted') || '[]');
         let allObjections = objectionData.map((o, idx) => {
+            if (objDeleted.includes(idx)) return null;
             if (objEdits[idx]) {
                 return { ...o, ...objEdits[idx], _builtinIdx: idx };
             }
             return { ...o, _builtinIdx: idx };
-        });
+        }).filter(o => o !== null);
         // カスタム追加分をマージ
         try {
             const customObjections = JSON.parse(localStorage.getItem('teleapo-custom-objection') || '[]');
@@ -2190,7 +2196,7 @@
         el.innerHTML = allObjections.map((o, i) => {
             const isBuiltin = o._builtinIdx !== undefined;
             const itemKey = isBuiltin ? 'builtin-' + o._builtinIdx : 'custom-' + o.customId;
-            const deleteCall = o.customId ? `deleteObjectionItem(${o.customId})` : '';
+            const deleteCall = isBuiltin ? `deleteBuiltinObjection(${o._builtinIdx})` : (o.customId ? `deleteObjectionItem(${o.customId})` : '');
             return `
             <div class="objection-card" id="obj-item-${itemKey}">
                 <div class="objection-header" style="display:flex; justify-content:space-between; align-items:center; gap:8px; cursor:pointer;" onclick="this.parentElement.classList.toggle('open')">
@@ -2199,7 +2205,7 @@
                     </div>
                     <div style="display:flex; gap:4px;">
                         <button onclick="event.stopPropagation(); startObjInlineEdit('${itemKey}', ${isBuiltin ? o._builtinIdx : -1}, ${o.customId || 0});" style="background:none; border:none; font-size:14px; cursor:pointer; padding:4px;" title="編集">✏️</button>
-                        ${deleteCall ? `<button onclick="event.stopPropagation(); ${deleteCall};" style="background:none; border:none; font-size:14px; cursor:pointer; padding:4px;" title="削除">🗑️</button>` : ''}
+                        <button onclick="event.stopPropagation(); ${deleteCall};" style="background:none; border:none; font-size:14px; cursor:pointer; padding:4px;" title="削除">🗑️</button>
                         <span class="qa-toggle">▼</span>
                     </div>
                 </div>
@@ -2361,10 +2367,12 @@
 
     function getAllObjectionsMerged() {
         const objEdits = JSON.parse(localStorage.getItem('teleapo-objection-edits') || '{}');
+        const objDeleted = JSON.parse(localStorage.getItem('teleapo-objection-deleted') || '[]');
         let all = objectionData.map((o, idx) => {
+            if (objDeleted.includes(idx)) return null;
             if (objEdits[idx]) return { ...o, ...objEdits[idx] };
             return { ...o };
-        });
+        }).filter(o => o !== null);
         try {
             const custom = JSON.parse(localStorage.getItem('teleapo-custom-objection') || '[]');
             all = all.concat(custom);
@@ -3095,6 +3103,22 @@
         }
     }
 
+    function deleteBuiltinQA(idx) {
+        if (!confirm('このQ&Aを削除しますか？')) return;
+        try {
+            let deleted = JSON.parse(localStorage.getItem('teleapo-qa-deleted') || '[]');
+            if (!deleted.includes(idx)) deleted.push(idx);
+            localStorage.setItem('teleapo-qa-deleted', JSON.stringify(deleted));
+            // 編集データも消す
+            let edits = JSON.parse(localStorage.getItem('teleapo-qa-edits') || '{}');
+            delete edits[idx];
+            localStorage.setItem('teleapo-qa-edits', JSON.stringify(edits));
+            filterQA();
+        } catch(e) {
+            console.error('Error deleting builtin QA:', e);
+        }
+    }
+
     // ===== DIG FUNCTIONS =====
     function showAddDigForm() {
         document.getElementById('dig-add-form').style.display = 'block';
@@ -3140,6 +3164,21 @@
             renderDig();
         } catch(e) {
             console.error('Error deleting dig item:', e);
+        }
+    }
+
+    function deleteBuiltinDig(idx) {
+        if (!confirm('この深掘り質問を削除しますか？')) return;
+        try {
+            let deleted = JSON.parse(localStorage.getItem('teleapo-dig-deleted') || '[]');
+            if (!deleted.includes(idx)) deleted.push(idx);
+            localStorage.setItem('teleapo-dig-deleted', JSON.stringify(deleted));
+            let edits = JSON.parse(localStorage.getItem('teleapo-dig-edits') || '{}');
+            delete edits[idx];
+            localStorage.setItem('teleapo-dig-edits', JSON.stringify(edits));
+            renderDig();
+        } catch(e) {
+            console.error('Error deleting builtin dig:', e);
         }
     }
 
@@ -3257,6 +3296,21 @@
             renderObjections();
         } catch(e) {
             console.error('Error deleting objection item:', e);
+        }
+    }
+
+    function deleteBuiltinObjection(idx) {
+        if (!confirm('この切り返しフレーズを削除しますか？')) return;
+        try {
+            let deleted = JSON.parse(localStorage.getItem('teleapo-objection-deleted') || '[]');
+            if (!deleted.includes(idx)) deleted.push(idx);
+            localStorage.setItem('teleapo-objection-deleted', JSON.stringify(deleted));
+            let edits = JSON.parse(localStorage.getItem('teleapo-objection-edits') || '{}');
+            delete edits[idx];
+            localStorage.setItem('teleapo-objection-edits', JSON.stringify(edits));
+            renderObjections();
+        } catch(e) {
+            console.error('Error deleting builtin objection:', e);
         }
     }
 
