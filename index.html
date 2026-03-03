@@ -976,52 +976,23 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <!-- Firebase Auth SDK は不要（名前+パスワード方式） -->
 </head>
 <body>
     <!-- Login Overlay -->
     <div class="login-overlay" id="login-overlay">
         <div class="login-card">
-            <h2>🔒 ミューズパス テレアポ・アシスタント</h2>
-
-            <!-- Tab switching -->
-            <div style="display:flex; gap:0; margin-bottom:16px; border-bottom:2px solid var(--border);">
-                <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1; padding:10px; border:none; background:none; font-size:14px; font-weight:600; cursor:pointer; color:var(--primary); border-bottom:2px solid var(--primary); margin-bottom:-2px;">ログイン</button>
-                <button id="tab-register" onclick="switchAuthTab('register')" style="flex:1; padding:10px; border:none; background:none; font-size:14px; font-weight:600; cursor:pointer; color:var(--text-secondary); border-bottom:2px solid transparent; margin-bottom:-2px;">新規登録</button>
-            </div>
-
-            <!-- Login Form -->
-            <div id="auth-login-form" class="login-form">
-                <input type="email" id="login-email" placeholder="メールアドレス" autocomplete="email" style="margin-bottom:8px;">
-                <input type="password" id="login-password" placeholder="パスワード" autocomplete="current-password" onkeypress="if(event.key==='Enter') handleLogin()">
+            <h2>🔒 ログイン</h2>
+            <p>名前とパスワードを入力してログイン</p>
+            <div class="login-form">
+                <input type="text" id="login-input" placeholder="名前（例：田中太郎）" autocomplete="off">
+                <input type="password" id="login-password" placeholder="パスワード" autocomplete="off" onkeypress="if(event.key==='Enter') handleLogin()" style="margin-top:8px;">
                 <div id="login-error" style="color:#ef4444; font-size:13px; margin-top:6px; display:none;"></div>
-                <button class="login-btn" onclick="handleLogin()" style="margin-top:10px;">ログイン 👉</button>
-                <div style="margin-top:10px; text-align:center;">
-                    <a href="#" onclick="handlePasswordReset(); return false;" style="font-size:12px; color:var(--primary);">パスワードを忘れた方はこちら</a>
-                </div>
+                <button class="login-btn" onclick="handleLogin()" style="margin-top:8px;">ログイン 👉</button>
             </div>
-
-            <!-- Register Form -->
-            <div id="auth-register-form" class="login-form" style="display:none;">
-                <input type="text" id="register-name" placeholder="名前（例：田中太郎）" autocomplete="name" style="margin-bottom:8px;">
-                <input type="email" id="register-email" placeholder="会社メールアドレス" autocomplete="email" style="margin-bottom:8px;">
-                <input type="password" id="register-password" placeholder="パスワード（6文字以上）" autocomplete="new-password" style="margin-bottom:8px;">
-                <input type="password" id="register-password-confirm" placeholder="パスワード（確認）" autocomplete="new-password" onkeypress="if(event.key==='Enter') handleRegister()">
-                <div id="register-error" style="color:#ef4444; font-size:13px; margin-top:6px; display:none;"></div>
-                <div id="register-success" style="color:#10b981; font-size:13px; margin-top:6px; display:none;"></div>
-                <button class="login-btn" onclick="handleRegister()" style="margin-top:10px;">アカウント作成 ✉️</button>
-            </div>
-
-            <!-- Email Verification Notice -->
-            <div id="auth-verify-notice" style="display:none; text-align:center; padding:20px 0;">
-                <div style="font-size:40px; margin-bottom:12px;">📧</div>
-                <h3 style="margin-bottom:8px;">メール認証が必要です</h3>
-                <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;" id="verify-email-text">確認メールを送信しました。メール内のリンクをクリックして認証を完了してください。</p>
-                <button class="login-btn" onclick="checkEmailVerification()" style="margin-bottom:8px;">認証を確認する 🔄</button>
-                <br>
-                <a href="#" onclick="resendVerificationEmail(); return false;" style="font-size:12px; color:var(--primary);">認証メールを再送信</a>
-                <br><br>
-                <a href="#" onclick="backToLogin(); return false;" style="font-size:12px; color:var(--text-secondary);">ログイン画面に戻る</a>
+            <div class="login-users-list" id="login-users-list" style="display:none;">
+                <p>最近使用したユーザー（パスワードの入力は必要です）</p>
+                <div id="recent-users"></div>
             </div>
         </div>
     </div>
@@ -1361,12 +1332,10 @@
 
     let firebaseReady = false;
     let db = null;
-    let auth = null;
     try {
         if (firebaseConfig.apiKey && firebaseConfig.projectId) {
             firebase.initializeApp(firebaseConfig);
             db = firebase.database();
-            auth = firebase.auth();
             firebaseReady = true;
             console.log('Firebase initialized successfully');
         } else {
@@ -2015,259 +1984,74 @@
         syncUserToFirebase();
     }
 
+    // パスワード認証（SHA-256ハッシュで照合）
+    const PASS_HASH = 'ec7890049844a7e256de5b748fa869992e68ecddde8a04b7706b7fba04d510f9';
+
+    async function sha256(text) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(text);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
     function initCurrentUser() {
-        if (firebaseReady && auth) {
-            // Firebase Auth を使用
-            auth.onAuthStateChanged(function(user) {
-                if (user) {
-                    // ユーザーがログイン
-                    const displayName = user.displayName || user.email.split('@')[0];
-                    currentUser = displayName;
-                    localStorage.setItem('teleapo-currentUser', displayName);
-                    state = loadState();
-                    state.fontSize = state.fontSize || 14;
-                    document.getElementById('login-overlay').classList.add('hidden');
-                    document.getElementById('current-user-name').textContent = currentUser;
+        const savedUser = localStorage.getItem('teleapo-currentUser');
+        const isAuthed = sessionStorage.getItem('teleapo-auth') === 'true';
 
-                    // Register user in Firebase
-                    syncUserToFirebase();
+        if (savedUser && isAuthed) {
+            currentUser = savedUser;
+            state = loadState();
+            document.getElementById('login-overlay').classList.add('hidden');
+            document.getElementById('current-user-name').textContent = currentUser;
 
-                    // Sync all shared data from Firebase
-                    syncAllSharedDataFromFirebase();
-                    listenForSharedDataChanges();
+            // Firebase同期
+            syncUserToFirebase();
+            syncAllSharedDataFromFirebase();
+            listenForSharedDataChanges();
 
-                    // Register in local users list
-                    try {
-                        let users = JSON.parse(localStorage.getItem('teleapo-users') || '[]');
-                        if (!users.includes(displayName)) {
-                            users.push(displayName);
-                            localStorage.setItem('teleapo-users', JSON.stringify(users));
-                        }
-                    } catch(e) {}
-
-                    renderDashboard();
-                    renderTeam();
-                    renderScripts();
-                    renderComments();
-                } else {
-                    // 未ログイン
-                    currentUser = null;
-                    document.getElementById('login-overlay').classList.remove('hidden');
-                    switchAuthTab('login');
-                }
-            });
+            renderUsersList();
         } else {
-            // Firebase未設定時のフォールバック（ローカルのみ）
             currentUser = null;
             document.getElementById('login-overlay').classList.remove('hidden');
+            if (savedUser) {
+                document.getElementById('login-input').value = savedUser;
+            }
+            renderUsersList();
         }
-    }
-
-    function switchAuthTab(tab) {
-        const loginForm = document.getElementById('auth-login-form');
-        const registerForm = document.getElementById('auth-register-form');
-        const verifyNotice = document.getElementById('auth-verify-notice');
-        const tabLogin = document.getElementById('tab-login');
-        const tabRegister = document.getElementById('tab-register');
-
-        loginForm.style.display = 'none';
-        registerForm.style.display = 'none';
-        verifyNotice.style.display = 'none';
-
-        // Clear errors
-        document.getElementById('login-error').style.display = 'none';
-        document.getElementById('register-error').style.display = 'none';
-        document.getElementById('register-success').style.display = 'none';
-
-        if (tab === 'login') {
-            loginForm.style.display = 'block';
-            tabLogin.style.color = 'var(--primary)';
-            tabLogin.style.borderBottomColor = 'var(--primary)';
-            tabRegister.style.color = 'var(--text-secondary)';
-            tabRegister.style.borderBottomColor = 'transparent';
-        } else if (tab === 'register') {
-            registerForm.style.display = 'block';
-            tabRegister.style.color = 'var(--primary)';
-            tabRegister.style.borderBottomColor = 'var(--primary)';
-            tabLogin.style.color = 'var(--text-secondary)';
-            tabLogin.style.borderBottomColor = 'transparent';
-        }
-    }
-
-    function showVerifyNotice(email) {
-        document.getElementById('auth-login-form').style.display = 'none';
-        document.getElementById('auth-register-form').style.display = 'none';
-        document.getElementById('auth-verify-notice').style.display = 'block';
-        document.getElementById('verify-email-text').textContent = email + ' に確認メールを送信しました。メール内のリンクをクリックして認証を完了してください。';
-    }
-
-    function showAuthError(elementId, message) {
-        const el = document.getElementById(elementId);
-        el.textContent = message;
-        el.style.display = 'block';
     }
 
     async function handleLogin() {
-        if (!firebaseReady || !auth) {
-            alert('Firebase が設定されていません');
-            return;
-        }
-
-        const email = document.getElementById('login-email').value.trim();
-        const password = document.getElementById('login-password').value;
+        const input = document.getElementById('login-input');
+        const passInput = document.getElementById('login-password');
         const errorEl = document.getElementById('login-error');
+        const username = input.value.trim();
+        const password = passInput.value;
+
         errorEl.style.display = 'none';
 
-        if (!email) { showAuthError('login-error', 'メールアドレスを入力してください'); return; }
-        if (!password) { showAuthError('login-error', 'パスワードを入力してください'); return; }
-
-        try {
-            const userCredential = await auth.signInWithEmailAndPassword(email, password);
-            // onAuthStateChanged が自動的にログイン処理を行う
-        } catch(error) {
-            let msg = 'ログインに失敗しました';
-            switch(error.code) {
-                case 'auth/user-not-found': msg = 'このメールアドレスは登録されていません'; break;
-                case 'auth/wrong-password': msg = 'パスワードが間違っています'; break;
-                case 'auth/invalid-email': msg = 'メールアドレスの形式が正しくありません'; break;
-                case 'auth/too-many-requests': msg = 'ログイン試行回数が多すぎます。しばらく待ってからお試しください'; break;
-                case 'auth/invalid-credential': msg = 'メールアドレスまたはパスワードが間違っています'; break;
-            }
-            showAuthError('login-error', msg);
+        if (!username) {
+            errorEl.textContent = '名前を入力してください';
+            errorEl.style.display = 'block';
+            return;
         }
-    }
-
-    async function handleRegister() {
-        if (!firebaseReady || !auth) {
-            alert('Firebase が設定されていません');
+        if (!password) {
+            errorEl.textContent = 'パスワードを入力してください';
+            errorEl.style.display = 'block';
             return;
         }
 
-        const name = document.getElementById('register-name').value.trim();
-        const email = document.getElementById('register-email').value.trim();
-        const password = document.getElementById('register-password').value;
-        const passwordConfirm = document.getElementById('register-password-confirm').value;
-        const errorEl = document.getElementById('register-error');
-        const successEl = document.getElementById('register-success');
-        errorEl.style.display = 'none';
-        successEl.style.display = 'none';
-
-        if (!name) { showAuthError('register-error', '名前を入力してください'); return; }
-        if (!email) { showAuthError('register-error', 'メールアドレスを入力してください'); return; }
-        if (!password) { showAuthError('register-error', 'パスワードを入力してください'); return; }
-        if (password.length < 6) { showAuthError('register-error', 'パスワードは6文字以上にしてください'); return; }
-        if (password !== passwordConfirm) { showAuthError('register-error', 'パスワードが一致しません'); return; }
-
-        try {
-            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-            const user = userCredential.user;
-
-            // Set display name
-            await user.updateProfile({ displayName: name });
-
-            // Save user info to Firebase DB
-            if (db) {
-                db.ref('users/' + encodeURIComponent(name)).set({
-                    name: name,
-                    email: email,
-                    records: [],
-                    lastActive: new Date().toISOString()
-                });
-            }
-
-            // onAuthStateChanged が自動的にログイン処理を行う
-        } catch(error) {
-            let msg = '登録に失敗しました';
-            switch(error.code) {
-                case 'auth/email-already-in-use': msg = 'このメールアドレスは既に登録されています'; break;
-                case 'auth/invalid-email': msg = 'メールアドレスの形式が正しくありません'; break;
-                case 'auth/weak-password': msg = 'パスワードが弱すぎます（6文字以上にしてください）'; break;
-            }
-            showAuthError('register-error', msg);
-        }
-    }
-
-    async function checkEmailVerification() {
-        if (!auth || !auth.currentUser) {
-            alert('ログインしてください');
-            backToLogin();
+        const hash = await sha256(password);
+        if (hash !== PASS_HASH) {
+            errorEl.textContent = 'パスワードが違います';
+            errorEl.style.display = 'block';
+            passInput.value = '';
             return;
         }
 
-        try {
-            await auth.currentUser.reload();
-            if (auth.currentUser.emailVerified) {
-                // Verified! onAuthStateChanged will handle the rest
-                // Force state update
-                const displayName = auth.currentUser.displayName || auth.currentUser.email.split('@')[0];
-                currentUser = displayName;
-                localStorage.setItem('teleapo-currentUser', displayName);
-                state = loadState();
-                state.fontSize = state.fontSize || 14;
-
-                syncUserToFirebase();
-
-                try {
-                    let users = JSON.parse(localStorage.getItem('teleapo-users') || '[]');
-                    if (!users.includes(displayName)) {
-                        users.push(displayName);
-                        localStorage.setItem('teleapo-users', JSON.stringify(users));
-                    }
-                } catch(e) {}
-
-                document.getElementById('login-overlay').classList.add('hidden');
-                document.getElementById('current-user-name').textContent = currentUser;
-                renderDashboard();
-                renderTeam();
-                renderScripts();
-                renderComments();
-            } else {
-                alert('まだメール認証が完了していません。メールをご確認ください。');
-            }
-        } catch(e) {
-            console.error('Verification check error:', e);
-            alert('確認に失敗しました。もう一度お試しください。');
-        }
-    }
-
-    async function resendVerificationEmail() {
-        if (!auth || !auth.currentUser) {
-            alert('まず登録またはログインしてください');
-            return;
-        }
-        try {
-            await auth.currentUser.sendEmailVerification();
-            alert('認証メールを再送信しました。メールをご確認ください。');
-        } catch(e) {
-            alert('送信に失敗しました。しばらく待ってからお試しください。');
-        }
-    }
-
-    function backToLogin() {
-        if (auth && auth.currentUser) {
-            auth.signOut();
-        }
-        switchAuthTab('login');
-    }
-
-    async function handlePasswordReset() {
-        if (!firebaseReady || !auth) {
-            alert('Firebase が設定されていません');
-            return;
-        }
-        const email = document.getElementById('login-email').value.trim();
-        if (!email) {
-            showAuthError('login-error', 'メールアドレスを入力してから「パスワードを忘れた方はこちら」をクリックしてください');
-            return;
-        }
-        try {
-            await auth.sendPasswordResetEmail(email);
-            alert(email + ' にパスワードリセットメールを送信しました。');
-        } catch(e) {
-            let msg = 'リセットメールの送信に失敗しました';
-            if (e.code === 'auth/user-not-found') msg = 'このメールアドレスは登録されていません';
-            showAuthError('login-error', msg);
-        }
+        // 認証OK
+        sessionStorage.setItem('teleapo-auth', 'true');
+        loginUser(username);
     }
 
     function loginUser(username) {
@@ -2286,12 +2070,18 @@
         state = loadState();
         state.fontSize = state.fontSize || 14;
 
-        // Sync to Firebase
+        // Firebase同期
         syncUserToFirebase();
+        syncAllSharedDataFromFirebase();
+        listenForSharedDataChanges();
 
         document.getElementById('login-overlay').classList.add('hidden');
         document.getElementById('current-user-name').textContent = currentUser;
+        document.getElementById('login-input').value = '';
+        document.getElementById('login-password').value = '';
+        document.getElementById('login-error').style.display = 'none';
 
+        renderUsersList();
         renderDashboard();
         renderTeam();
         renderScripts();
@@ -2299,15 +2089,40 @@
     }
 
     function handleLogout() {
-        if (auth && auth.currentUser) {
-            auth.signOut();
-        }
         localStorage.removeItem('teleapo-currentUser');
         sessionStorage.removeItem('teleapo-auth');
         currentUser = null;
         state = {};
         document.getElementById('login-overlay').classList.remove('hidden');
-        switchAuthTab('login');
+        document.getElementById('login-input').value = '';
+        document.getElementById('login-password').value = '';
+        document.getElementById('login-error').style.display = 'none';
+        renderUsersList();
+    }
+
+    function renderUsersList() {
+        try {
+            let users = JSON.parse(localStorage.getItem('teleapo-users') || '[]');
+            const listEl = document.getElementById('recent-users');
+            const containerEl = document.getElementById('login-users-list');
+
+            if (users.length > 0 && listEl && containerEl) {
+                listEl.innerHTML = '';
+                users.forEach(u => {
+                    const btn = document.createElement('button');
+                    btn.className = 'login-user-btn';
+                    btn.textContent = u;
+                    btn.addEventListener('click', () => {
+                        document.getElementById('login-input').value = u;
+                        const passEl = document.getElementById('login-password');
+                        passEl.value = '';
+                        passEl.focus();
+                    });
+                    listEl.appendChild(btn);
+                });
+                containerEl.style.display = 'block';
+            }
+        } catch(e) {}
     }
 
     // ===== THEME =====
