@@ -2019,12 +2019,44 @@
 
         if (savedUser && isAuthed) {
             currentUser = savedUser;
-            state = loadState();
+            var localState = loadState();
+            localState.fontSize = localState.fontSize || 14;
             document.getElementById('login-overlay').classList.add('hidden');
             document.getElementById('current-user-name').textContent = currentUser;
 
-            // Firebase同期
-            syncUserToFirebase();
+            // Firebaseからデータを読み込んでマージ
+            if (firebaseReady && db) {
+                var encodedName = encodeURIComponent(savedUser);
+                db.ref('users/' + encodedName).once('value').then(function(snapshot) {
+                    var fbData = snapshot.val();
+                    if (fbData && fbData.records && fbData.records.length > 0) {
+                        var merged = fbData.records.slice();
+                        var fbDates = {};
+                        merged.forEach(function(r) { fbDates[r.date] = true; });
+                        (localState.records || []).forEach(function(r) {
+                            if (!fbDates[r.date]) merged.push(r);
+                        });
+                        state.records = merged;
+                    } else {
+                        state.records = localState.records || [];
+                    }
+                    state.qaViews = localState.qaViews || 0;
+                    state.fontSize = localState.fontSize || 14;
+                    saveState();
+                    renderDashboard();
+                    renderTeam();
+                }).catch(function(e) {
+                    state = localState;
+                    syncUserToFirebase();
+                    renderDashboard();
+                    renderTeam();
+                });
+            } else {
+                state = localState;
+                renderDashboard();
+                renderTeam();
+            }
+
             syncAllSharedDataFromFirebase();
             listenForSharedDataChanges();
 
@@ -2085,11 +2117,47 @@
             }
         } catch(e) {}
 
-        state = loadState();
-        state.fontSize = state.fontSize || 14;
+        // まずローカルを読み込み
+        var localState = loadState();
+        localState.fontSize = localState.fontSize || 14;
 
-        // Firebase同期
-        syncUserToFirebase();
+        // Firebase同期（Firebaseのデータを優先してマージ）
+        if (firebaseReady && db) {
+            var encodedName = encodeURIComponent(username);
+            db.ref('users/' + encodedName).once('value').then(function(snapshot) {
+                var fbData = snapshot.val();
+                if (fbData && fbData.records && fbData.records.length > 0) {
+                    // Firebaseにデータがある場合：ローカルの記録とマージ（日付で重複排除）
+                    var merged = fbData.records.slice();
+                    var fbDates = {};
+                    merged.forEach(function(r) { fbDates[r.date] = true; });
+                    (localState.records || []).forEach(function(r) {
+                        if (!fbDates[r.date]) merged.push(r);
+                    });
+                    state.records = merged;
+                } else {
+                    // Firebaseにデータがない場合：ローカルのデータを使用
+                    state.records = localState.records || [];
+                }
+                state.qaViews = localState.qaViews || 0;
+                state.fontSize = localState.fontSize || 14;
+                // 保存してレンダリング
+                saveState();
+                renderDashboard();
+                renderTeam();
+            }).catch(function(e) {
+                console.error('Firebase user data load error:', e);
+                state = localState;
+                syncUserToFirebase();
+                renderDashboard();
+                renderTeam();
+            });
+        } else {
+            state = localState;
+            renderDashboard();
+            renderTeam();
+        }
+
         syncAllSharedDataFromFirebase();
         listenForSharedDataChanges();
 
@@ -2100,8 +2168,6 @@
         document.getElementById('login-error').style.display = 'none';
 
         renderUsersList();
-        renderDashboard();
-        renderTeam();
         renderScripts();
         renderComments();
     }
