@@ -4286,10 +4286,12 @@
             let comments = JSON.parse(localStorage.getItem('teleapo-comments') || '[]');
 
             comments.push({
+                id: Date.now() + '-' + Math.random().toString(36).substr(2, 6),
                 author: currentUser,
                 category: category,
                 text: text,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                replies: []
             });
 
             localStorage.setItem('teleapo-comments', JSON.stringify(comments));
@@ -4382,7 +4384,21 @@
                 return;
             }
 
+            // コメントにIDを付与（既存データ互換）
+            let allComments = JSON.parse(localStorage.getItem('teleapo-comments') || '[]');
+            let needsSave = false;
+            allComments.forEach((c, i) => {
+                if (!c.id) { c.id = c.timestamp + '-' + i; needsSave = true; }
+                if (!c.replies) { c.replies = []; }
+            });
+            if (needsSave) {
+                localStorage.setItem('teleapo-comments', JSON.stringify(allComments));
+                if (firebaseReady && db) db.ref('shared/teleapo-comments').set(allComments).catch(function(e){});
+            }
+
             comments.forEach(c => {
+                if (!c.id) c.id = c.timestamp + '-0';
+                if (!c.replies) c.replies = [];
                 const date = new Date(c.timestamp);
                 const timeStr = date.toLocaleDateString('ja-JP') + ' ' + date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
 
@@ -4408,7 +4424,6 @@
 
                 const textDiv = document.createElement('div');
                 textDiv.className = 'comment-text';
-                // Safely handle newlines without innerHTML
                 c.text.split('\n').forEach((line, i, arr) => {
                     textDiv.appendChild(document.createTextNode(line));
                     if (i < arr.length - 1) textDiv.appendChild(document.createElement('br'));
@@ -4417,10 +4432,86 @@
                 card.appendChild(header);
                 card.appendChild(catDiv);
                 card.appendChild(textDiv);
+
+                // 返信一覧
+                if (c.replies && c.replies.length > 0) {
+                    const repliesDiv = document.createElement('div');
+                    repliesDiv.style.cssText = 'margin-top:12px; padding-top:10px; border-top:1px solid var(--border);';
+                    c.replies.forEach(reply => {
+                        const rDate = new Date(reply.timestamp);
+                        const rTimeStr = rDate.toLocaleDateString('ja-JP') + ' ' + rDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                        const replyEl = document.createElement('div');
+                        replyEl.style.cssText = 'background:var(--bg); border-radius:8px; padding:10px 12px; margin-bottom:6px; border-left:3px solid var(--primary);';
+                        const rHeader = document.createElement('div');
+                        rHeader.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:4px;';
+                        rHeader.innerHTML = '<span style="font-weight:600; font-size:13px; color:var(--primary);">' + escapeHTML(reply.author) + '</span><span style="font-size:11px; color:var(--text-secondary);">' + escapeHTML(rTimeStr) + '</span>';
+                        replyEl.appendChild(rHeader);
+                        const rText = document.createElement('div');
+                        rText.style.cssText = 'font-size:13px; line-height:1.5;';
+                        reply.text.split('\n').forEach((line, i, arr) => {
+                            rText.appendChild(document.createTextNode(line));
+                            if (i < arr.length - 1) rText.appendChild(document.createElement('br'));
+                        });
+                        replyEl.appendChild(rText);
+                        repliesDiv.appendChild(replyEl);
+                    });
+                    card.appendChild(repliesDiv);
+                }
+
+                // 返信ボタン＆フォーム
+                const replyArea = document.createElement('div');
+                replyArea.style.cssText = 'margin-top:10px;';
+                const safeId = c.id.replace(/'/g, "\\'");
+                replyArea.innerHTML = '<button onclick="toggleReplyForm(\'' + safeId + '\')" style="background:none; border:none; color:var(--primary); font-size:13px; cursor:pointer; padding:4px 0; font-weight:500;">💬 返信する</button>' +
+                    '<div id="reply-form-' + escapeHTML(c.id) + '" style="display:none; margin-top:8px;">' +
+                    '<textarea id="reply-text-' + escapeHTML(c.id) + '" placeholder="返信を入力..." rows="3" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg); color:var(--text); resize:vertical; font-family:inherit; line-height:1.5;"></textarea>' +
+                    '<div style="display:flex; gap:8px; margin-top:6px; justify-content:flex-end;">' +
+                    '<button onclick="toggleReplyForm(\'' + safeId + '\')" style="padding:6px 14px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); font-size:13px; cursor:pointer;">キャンセル</button>' +
+                    '<button onclick="addReply(\'' + safeId + '\')" style="padding:6px 14px; border-radius:6px; border:none; background:var(--primary); color:white; font-size:13px; cursor:pointer; font-weight:600;">送信</button>' +
+                    '</div></div>';
+                card.appendChild(replyArea);
+
                 el.appendChild(card);
             });
         } catch(e) {
             console.error('Error rendering comments:', e);
+        }
+    }
+
+    function toggleReplyForm(commentId) {
+        var form = document.getElementById('reply-form-' + commentId);
+        if (form) {
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+    }
+
+    function addReply(commentId) {
+        if (!currentUser) { alert('ログインしてください'); return; }
+        var textEl = document.getElementById('reply-text-' + commentId);
+        if (!textEl) return;
+        var text = textEl.value.trim();
+        if (!text) { alert('返信を入力してください'); return; }
+
+        try {
+            var comments = JSON.parse(localStorage.getItem('teleapo-comments') || '[]');
+            var found = false;
+            comments.forEach(function(c) {
+                if (c.id === commentId) {
+                    if (!c.replies) c.replies = [];
+                    c.replies.push({
+                        author: currentUser,
+                        text: text,
+                        timestamp: new Date().toISOString()
+                    });
+                    found = true;
+                }
+            });
+            if (!found) { alert('コメントが見つかりません'); return; }
+            localStorage.setItem('teleapo-comments', JSON.stringify(comments));
+            if (firebaseReady && db) db.ref('shared/teleapo-comments').set(comments).catch(function(e){});
+            renderComments();
+        } catch(e) {
+            console.error('Reply error:', e);
         }
     }
 
