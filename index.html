@@ -1284,6 +1284,7 @@
                         <th>接続率</th>
                         <th>アポ率(架電)</th>
                         <th>アポ率(接話)</th>
+                        <th>アポ取得単価</th>
                     </tr>
                 </thead>
                 <tbody id="team-tbody"></tbody>
@@ -1434,6 +1435,8 @@
             const userData = {
                 name: currentUser,
                 records: state.records || [],
+                hourlyRate: state.hourlyRate || 0,
+                workHours: state.workHours || 8,
                 lastActive: new Date().toISOString()
             };
             db.ref('users/' + encodeURIComponent(currentUser)).set(userData);
@@ -3740,6 +3743,25 @@
                     let appointmentRateCall = totalCalls > 0 ? ((totalAppointments / totalCalls) * 100).toFixed(1) : 0;
                     let appointmentRate = totalConnects > 0 ? ((totalAppointments / totalConnects) * 100).toFixed(1) : 0;
 
+                    // アポ取得単価の計算
+                    let hourlyRate = 0; let workHours = 8;
+                    try {
+                        let uState = typeof userData.state === 'string' ? JSON.parse(userData.state) : (userData.state || {});
+                        // stateが直接recordsと同列に保存されている場合
+                        hourlyRate = userData.hourlyRate || uState.hourlyRate || 0;
+                        workHours = userData.workHours || uState.workHours || 8;
+                    } catch(e) {}
+                    // 自分のデータならstateから直接取る
+                    if (userName === currentUser) {
+                        hourlyRate = state.hourlyRate || hourlyRate;
+                        workHours = state.workHours || workHours;
+                    }
+                    let apoCostStr = '---';
+                    if (totalAppointments > 0 && hourlyRate > 0 && records.length > 0) {
+                        let cost = (hourlyRate * workHours * records.length) / totalAppointments;
+                        apoCostStr = Math.round(cost).toLocaleString('ja-JP') + '円';
+                    }
+
                     teamStats.push({
                         name: userName,
                         calls: totalCalls,
@@ -3748,6 +3770,7 @@
                         connectRate: connectRate,
                         appointmentRateCall: appointmentRateCall,
                         appointmentRate: appointmentRate,
+                        apoCost: apoCostStr,
                         lastActive: userData.lastActive || ''
                     });
 
@@ -3776,6 +3799,14 @@
                     let appointmentRateCall = totalCalls > 0 ? ((totalAppointments / totalCalls) * 100).toFixed(1) : 0;
                     let appointmentRate = totalConnects > 0 ? ((totalAppointments / totalConnects) * 100).toFixed(1) : 0;
 
+                    let lHourlyRate = userData.hourlyRate || 0;
+                    let lWorkHours = userData.workHours || 8;
+                    if (user === currentUser) { lHourlyRate = state.hourlyRate || lHourlyRate; lWorkHours = state.workHours || lWorkHours; }
+                    let lApoCostStr = '---';
+                    if (totalAppointments > 0 && lHourlyRate > 0 && records.length > 0) {
+                        lApoCostStr = Math.round((lHourlyRate * lWorkHours * records.length) / totalAppointments).toLocaleString('ja-JP') + '円';
+                    }
+
                     teamStats.push({
                         name: user,
                         calls: totalCalls,
@@ -3783,7 +3814,8 @@
                         appointments: totalAppointments,
                         connectRate: connectRate,
                         appointmentRateCall: appointmentRateCall,
-                        appointmentRate: appointmentRate
+                        appointmentRate: appointmentRate,
+                        apoCost: lApoCostStr
                     });
 
                     totals.calls += totalCalls;
@@ -3801,7 +3833,7 @@
             if (summaryEl) summaryEl.innerHTML = '';
             if (dailyLogEl) dailyLogEl.innerHTML = '';
             document.getElementById('team-tbody').innerHTML = `
-                <tr><td colspan="7" style="text-align:center; padding:40px 20px;">
+                <tr><td colspan="8" style="text-align:center; padding:40px 20px;">
                     <div class="empty-state">
                         <div class="emoji">👥</div>
                         <p>チームメンバーがまだいません。ログインしたユーザーがここに表示されます。</p>
@@ -3814,14 +3846,16 @@
         // Team summary cards
         if (summaryEl) {
             let totalConnectRate = totals.calls > 0 ? ((totals.connects / totals.calls) * 100).toFixed(1) : '0.0';
-            let totalApoRate = totals.connects > 0 ? ((totals.appointments / totals.connects) * 100).toFixed(1) : '0.0';
+            let totalApoRateCall = totals.calls > 0 ? ((totals.appointments / totals.calls) * 100).toFixed(1) : '0.0';
+            let totalApoRateTalk = totals.connects > 0 ? ((totals.appointments / totals.connects) * 100).toFixed(1) : '0.0';
             summaryEl.innerHTML = `
                 <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-number">${userNames.length}人</div><div class="stat-label">メンバー数</div></div>
                 <div class="stat-card"><div class="stat-icon">📞</div><div class="stat-number">${totals.calls}</div><div class="stat-label">チーム累計架電</div></div>
                 <div class="stat-card"><div class="stat-icon">🗣️</div><div class="stat-number">${totals.connects}</div><div class="stat-label">チーム累計通話</div></div>
                 <div class="stat-card"><div class="stat-icon">🎯</div><div class="stat-number">${totals.appointments}</div><div class="stat-label">チーム累計アポ</div></div>
                 <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-number">${totalConnectRate}%</div><div class="stat-label">チーム接続率</div></div>
-                <div class="stat-card"><div class="stat-icon">🏅</div><div class="stat-number">${totalApoRate}%</div><div class="stat-label">チームアポ率</div></div>
+                <div class="stat-card"><div class="stat-icon">📞</div><div class="stat-number">${totalApoRateCall}%</div><div class="stat-label">チームアポ率(架電)</div></div>
+                <div class="stat-card"><div class="stat-icon">🏅</div><div class="stat-number">${totalApoRateTalk}%</div><div class="stat-label">チームアポ率(接話)</div></div>
             `;
         }
 
@@ -3837,6 +3871,7 @@
                 <td>${stat.connectRate}%</td>
                 <td>${stat.appointmentRateCall}%</td>
                 <td>${stat.appointmentRate}%</td>
+                <td>${stat.apoCost || '---'}</td>
             </tr>`;
         }).join('');
 
@@ -3851,6 +3886,7 @@
             <td>${totalConnectRate}%</td>
             <td>${totalAppointmentRateCall}%</td>
             <td>${totalAppointmentRate}%</td>
+            <td>-</td>
         </tr>`;
 
         document.getElementById('team-tbody').innerHTML = html;
