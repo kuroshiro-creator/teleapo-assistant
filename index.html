@@ -1230,23 +1230,26 @@
 
             <!-- Record Form -->
             <div class="record-form">
-                <h3 style="margin-bottom:16px; font-size:16px;">📝 今日の記録</h3>
+                <h3 style="margin-bottom:16px; font-size:16px;">📝 記録を追加</h3>
                 <div class="form-row">
+                    <div class="form-group">
+                        <label>📅 日付</label>
+                        <input type="date" id="input-record-date">
+                    </div>
                     <div class="form-group">
                         <label>📞 架電数</label>
                         <input type="number" id="input-calls" min="0" value="0">
                     </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label>🗣️ 通話数（つながった数）</label>
                         <input type="number" id="input-connects" min="0" value="0">
                     </div>
-                </div>
-                <div class="form-row">
                     <div class="form-group">
                         <label>🎯 アポ獲得数</label>
                         <input type="number" id="input-appointments" min="0" value="0">
                     </div>
-                    <div class="form-group"></div>
                 </div>
                 <div class="form-group" style="margin-bottom:16px;">
                     <label>📝 今日の気づき・メモ</label>
@@ -3262,6 +3265,13 @@
         nextActionText.textContent = action;
         nextActionCard.style.display = 'block';
 
+        // Load date default (today)
+        var dateInput = document.getElementById('input-record-date');
+        if (dateInput && !dateInput.value) {
+            var today = new Date();
+            dateInput.value = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+        }
+
         // Load cost settings into form
         var hrInput = document.getElementById('input-hourly-rate');
         var whInput = document.getElementById('input-work-hours');
@@ -3276,7 +3286,6 @@
             <div class="stat-card"><div class="stat-icon">📞</div><div class="stat-number">${apoRateCall}%</div><div class="stat-label">アポ率(架電)</div></div>
             <div class="stat-card"><div class="stat-icon">🏅</div><div class="stat-number">${apoRateTalk}%</div><div class="stat-label">アポ率(接話)</div></div>
             <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-number">${apoCostStr}</div><div class="stat-label">アポ取得単価</div></div>
-            <div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-number">${stats.streak}日</div><div class="stat-label">連続記録</div></div>
         `;
 
         // History
@@ -3327,26 +3336,30 @@
             return;
         }
 
-        const today = new Date().toLocaleDateString('ja-JP');
-        const existingIdx = state.records.findIndex(r => r.date === today);
-
-        const record = { date: today, calls, connects, appointments, memo };
-
-        if (existingIdx >= 0) {
-            state.records[existingIdx] = record;
+        // 日付入力欄から取得（未入力なら今日）
+        const dateInput = document.getElementById('input-record-date').value;
+        let dateStr;
+        if (dateInput) {
+            const d = new Date(dateInput);
+            dateStr = d.toLocaleDateString('ja-JP');
         } else {
-            state.records.push(record);
+            dateStr = new Date().toLocaleDateString('ja-JP');
         }
+
+        const record = { date: dateStr, calls, connects, appointments, memo };
+
+        // 常に追加（同じ日付でも上書きしない）
+        state.records.push(record);
 
         saveState();
         renderDashboard();
         renderTeam();
 
         // Reset form
+        document.getElementById('input-record-date').value = '';
         document.getElementById('input-calls').value = 0;
         document.getElementById('input-connects').value = 0;
         document.getElementById('input-appointments').value = 0;
-
         document.getElementById('input-memo').value = '';
 
         alert('記録を保存しました！ 💪');
@@ -3356,17 +3369,18 @@
         const r = state.records[idx];
         if (!r) return;
         showEditModal('成長記録編集', [
+            {label: '日付', value: r.date, type: 'text', rows: 1},
             {label: '架電数', value: r.calls, type: 'number'},
             {label: '接続数', value: r.connects, type: 'number'},
             {label: 'アポ数', value: r.appointments, type: 'number'},
             {label: 'メモ（任意）', value: r.memo || '', type: 'text'}
         ], function(results) {
             state.records[idx] = {
-                date: r.date,
-                calls: parseInt(results[0]) || 0,
-                connects: parseInt(results[1]) || 0,
-                appointments: parseInt(results[2]) || 0,
-                memo: results[3]
+                date: results[0] || r.date,
+                calls: parseInt(results[1]) || 0,
+                connects: parseInt(results[2]) || 0,
+                appointments: parseInt(results[3]) || 0,
+                memo: results[4]
             };
             saveState();
             renderDashboard();
@@ -3938,13 +3952,14 @@
             const idx = records.findIndex(function(r) { return r.date === dateStr; });
             if (idx === -1) { alert('該当の記録が見つかりません'); return; }
             const r = records[idx];
-            showEditModal(userName + ' (' + dateStr + ') 記録編集', [
+            showEditModal(userName + ' 記録編集', [
+                {label: '日付', value: dateStr, type: 'text', rows: 1},
                 {label: '架電数', value: r.calls, type: 'number'},
                 {label: '接続数', value: r.connects, type: 'number'},
                 {label: 'アポ数', value: r.appointments, type: 'number'},
                 {label: 'メモ（任意）', value: r.memo || '', type: 'text'}
             ], function(results) {
-                records[idx] = { date: dateStr, calls: parseInt(results[0]) || 0, connects: parseInt(results[1]) || 0, appointments: parseInt(results[2]) || 0, memo: results[3] };
+                records[idx] = { date: results[0] || dateStr, calls: parseInt(results[1]) || 0, connects: parseInt(results[2]) || 0, appointments: parseInt(results[3]) || 0, memo: results[4] };
                 db.ref('users/' + encodedName + '/records').set(records).then(function() {
                     // 自分の記録の場合はローカルも更新
                     if (userName === currentUser) {
