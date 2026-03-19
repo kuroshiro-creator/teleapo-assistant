@@ -1335,6 +1335,19 @@
 
             <!-- Comments List -->
             <div id="comments-list"></div>
+
+            <!-- アドバイス Section -->
+            <div style="margin-top:32px; border-top:2px solid var(--border); padding-top:24px;">
+                <h2 style="margin-bottom:12px; font-size:18px;">📌 アドバイス</h2>
+                <p style="margin-bottom:16px; color:var(--text-secondary); font-size:13px;">テレアポに関するアドバイスやコツをチームで共有しよう。誰でも追加・編集・削除できます。</p>
+                <div style="background:var(--card); border-radius:var(--radius); padding:16px; margin-bottom:16px; box-shadow:var(--shadow);">
+                    <h4 style="margin-bottom:10px; font-size:14px;">➕ アドバイスを追加</h4>
+                    <input type="text" id="add-advice-title" placeholder="タイトル（例：受付突破のコツ）" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:13px; margin-bottom:6px;">
+                    <textarea id="add-advice-body" rows="4" placeholder="アドバイスの詳細（例：最初の10秒で興味を引くことが重要。具体的な数字を出すと効果的。）" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:13px; margin-bottom:8px;"></textarea>
+                    <button onclick="addAdvice()" style="padding:6px 14px; background:var(--primary); color:white; border:none; border-radius:6px; cursor:pointer; font-size:13px;">追加</button>
+                </div>
+                <div id="advice-list"></div>
+            </div>
         </div>
 
         <!-- アポ・資料送付音声 Tab -->
@@ -1402,6 +1415,7 @@
                 </div>
                 <div id="targeting-list"></div>
             </div>
+
         </div>
     </div>
 
@@ -1533,6 +1547,7 @@
                 try { renderMotivationList(); } catch(e) {}
                 try { renderPhilosophyList(); } catch(e) {}
                 try { renderTargetingList(); } catch(e) {}
+                try { renderAdviceList(); } catch(e) {}
             } catch(e) {
                 console.error('Re-render error after Firebase sync:', e);
             }
@@ -1587,6 +1602,7 @@
                 try { renderMotivationList(); } catch(e) {}
                 try { renderPhilosophyList(); } catch(e) {}
                 try { renderTargetingList(); } catch(e) {}
+                try { renderAdviceList(); } catch(e) {}
             } catch(e) {}
         });
     }
@@ -1606,7 +1622,8 @@
             'teleapo-qa-deleted': [], 'teleapo-dig-deleted': [], 'teleapo-objection-deleted': [],
             'teleapo-custom-quotes': [], 'teleapo-quote-edits': {}, 'teleapo-quote-deleted': [],
             'teleapo-philosophy': [], 'teleapo-targeting': [],
-            'teleapo-comments': [], 'teleapo-scripts': []
+            'teleapo-comments': [], 'teleapo-scripts': [],
+            'teleapo-advice': []
         };
         db.ref('shared').once('value').then(function(snapshot) {
             var existing = snapshot.val() || {};
@@ -2566,6 +2583,9 @@
             renderMotivationList();
             renderPhilosophyList();
             renderTargetingList();
+        }
+        if (tab === 'comments') {
+            renderAdviceList();
         }
     }
 
@@ -3702,6 +3722,79 @@
         localStorage.setItem('teleapo-targeting', JSON.stringify(items));
         if (firebaseReady && db) db.ref('shared/teleapo-targeting').set(items).catch(function(e){});
         renderTargetingList();
+    }
+
+    // ===== アドバイス CRUD =====
+    function renderAdviceList() {
+        var el = document.getElementById('advice-list');
+        if (!el) return;
+
+        var items = JSON.parse(localStorage.getItem('teleapo-advice') || '[]');
+
+        if (items.length === 0) {
+            el.innerHTML = '<div class="empty-state"><div class="emoji">📌</div><p>まだアドバイスが登録されていません。テレアポのコツを共有しましょう！</p></div>';
+            return;
+        }
+
+        el.innerHTML = items.map(function(item) {
+            return '<div style="background:var(--card); border-radius:var(--radius); padding:16px; margin-bottom:10px; box-shadow:var(--shadow);">' +
+                '<div style="display:flex; justify-content:space-between; align-items:flex-start;">' +
+                    '<div style="flex:1;">' +
+                        '<h4 style="font-size:15px; margin-bottom:6px;">' + escapeHTML(item.title) + '</h4>' +
+                        '<p style="font-size:13px; color:var(--text-secondary); white-space:pre-wrap;">' + escapeHTML(item.body) + '</p>' +
+                        '<div style="font-size:11px; color:var(--text-secondary); margin-top:6px;">' +
+                            '👤 ' + escapeHTML(item.author || '') + ' ・ ' + new Date(item.timestamp).toLocaleDateString('ja-JP') +
+                        '</div>' +
+                    '</div>' +
+                    '<div style="display:flex; gap:4px; margin-left:8px;">' +
+                        '<button onclick="editAdvice(\'' + item.id + '\')" style="background:none; border:none; cursor:pointer; font-size:14px;">✏️</button>' +
+                        '<button onclick="deleteAdvice(\'' + item.id + '\')" style="background:none; border:none; cursor:pointer; font-size:14px;">🗑️</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function addAdvice() {
+        if (!currentUser) { alert('ログインしてください'); return; }
+        var title = document.getElementById('add-advice-title').value.trim();
+        var body = document.getElementById('add-advice-body').value.trim();
+        if (!title) { alert('タイトルを入力してください'); return; }
+        if (!body) { alert('アドバイスの詳細を入力してください'); return; }
+
+        var items = JSON.parse(localStorage.getItem('teleapo-advice') || '[]');
+        items.push({ id: 'adv' + Date.now(), title: title, body: body, author: currentUser, timestamp: new Date().toISOString() });
+        localStorage.setItem('teleapo-advice', JSON.stringify(items));
+        if (firebaseReady && db) db.ref('shared/teleapo-advice').set(items).catch(function(e){});
+
+        document.getElementById('add-advice-title').value = '';
+        document.getElementById('add-advice-body').value = '';
+        renderAdviceList();
+    }
+
+    function editAdvice(id) {
+        var items = JSON.parse(localStorage.getItem('teleapo-advice') || '[]');
+        var item = items.find(function(i) { return i.id === id; });
+        if (!item) return;
+        showEditModal('アドバイス編集', [
+            {label: 'タイトル', value: item.title, type: 'text'},
+            {label: '詳細', value: item.body, type: 'text', rows: 6}
+        ], function(results) {
+            item.title = results[0];
+            item.body = results[1];
+            localStorage.setItem('teleapo-advice', JSON.stringify(items));
+            if (firebaseReady && db) db.ref('shared/teleapo-advice').set(items).catch(function(e){});
+            renderAdviceList();
+        });
+    }
+
+    function deleteAdvice(id) {
+        if (!confirm('このアドバイスを削除しますか？')) return;
+        var items = JSON.parse(localStorage.getItem('teleapo-advice') || '[]');
+        items = items.filter(function(i) { return i.id !== id; });
+        localStorage.setItem('teleapo-advice', JSON.stringify(items));
+        if (firebaseReady && db) db.ref('shared/teleapo-advice').set(items).catch(function(e){});
+        renderAdviceList();
     }
 
     // ===== TEAM DASHBOARD =====
@@ -4971,6 +5064,7 @@
         renderTeam();
         renderScripts();
         renderComments();
+        renderAdviceList();
         renderMotivation();
     })();
     </script>
