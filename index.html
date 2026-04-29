@@ -2297,6 +2297,13 @@
                     } else {
                         state.records = localState.records || [];
                     }
+                    // 月次記録マージ（Firebaseを優先）
+                    if (fbData && fbData.monthlyRecords) {
+                        var mergedMonthly = Object.assign({}, localState.monthlyRecords || {}, fbData.monthlyRecords);
+                        state.monthlyRecords = mergedMonthly;
+                    } else {
+                        state.monthlyRecords = localState.monthlyRecords || {};
+                    }
                     state.qaViews = localState.qaViews || 0;
                     state.fontSize = localState.fontSize || 14;
                     saveState();
