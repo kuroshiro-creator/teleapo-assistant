@@ -344,33 +344,6 @@
         }
 
         /* Objection Cards */
-        .objection-card {
-            background: var(--card);
-            border-radius: var(--radius);
-            margin-bottom: 12px;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            border: 1px solid var(--border);
-        }
-
-        .objection-header {
-            padding: 16px 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 600;
-        }
-
-        .objection-emoji { font-size: 24px; }
-
-        .objection-body {
-            display: none;
-            padding: 0 20px 20px;
-            border-top: 1px solid var(--border);
-        }
-
-        .objection-card.open .objection-body { display: block; }
 
         .response-step {
             display: flex;
@@ -1054,10 +1027,7 @@
         <div class="nav-item" onclick="switchTab('dig', this)">
             <span class="nav-icon">⛏️</span>深堀
         </div>
-        <div class="nav-item" onclick="switchTab('objection', this)">
-            <span class="nav-icon">🛡️</span>切り返し
-        </div>
-        <div class="nav-item" onclick="switchTab('scripts', this)">
+<div class="nav-item" onclick="switchTab('scripts', this)">
             <span class="nav-icon">📝</span>スクリプト
         </div>
         <div class="nav-item" onclick="switchTab('dashboard', this)">
@@ -1129,48 +1099,6 @@
                 </div>
             </div>
             <div id="dig-list"></div>
-        </div>
-
-        <!-- Objection Tab -->
-        <div id="tab-objection" class="tab-content">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
-                <h2 style="font-size:18px;">🛡️ 切り返しトーク集</h2>
-                <div style="display:flex; gap:8px;">
-                    <button onclick="showAddObjectionForm()" style="padding:8px 16px; background:var(--success); color:white; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;">＋ 切り返しを追加</button>
-                    <button id="call-mode-toggle" class="btn btn-primary" onclick="toggleCallMode()" style="font-size:16px; padding:10px 20px;">📞 通話中モード ON</button>
-                </div>
-            </div>
-            <p id="objection-desc" style="margin-bottom:20px; color:var(--text-secondary); font-size:14px;">断られたときの対応フレーズ集です。落ち着いて、まず共感してから切り返しましょう。</p>
-
-            <div id="objection-add-form" style="display:none; background:var(--card); border-radius:var(--radius); padding:16px; margin-bottom:16px; box-shadow:var(--shadow);">
-                <h4 style="margin-bottom:10px;">新しい切り返しフレーズを追加</h4>
-                <input type="text" id="add-objection-phrase" placeholder="切り返しフレーズ（例：「時間がない」）" style="width:100%; padding:8px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);">
-                <input type="text" id="add-objection-category" placeholder="カテゴリ（例：時間）" style="width:100%; padding:8px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);">
-                <div id="add-objection-steps" style="margin-bottom:8px;"></div>
-                <button onclick="addObjectionStep()" style="padding:6px 12px; background:var(--border); color:var(--text); border:none; border-radius:6px; cursor:pointer; margin-bottom:8px;">＋ ステップを追加</button>
-                <textarea id="add-objection-response" rows="2" placeholder="対応フレーズ（全体的な対応方法）" style="width:100%; padding:8px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);"></textarea>
-                <textarea id="add-objection-nextq" rows="2" placeholder="次の質問" style="width:100%; padding:8px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);"></textarea>
-                <div style="display:flex; gap:8px;">
-                    <button onclick="addObjectionItem()" style="padding:8px 16px; background:var(--primary); color:white; border:none; border-radius:6px; cursor:pointer;">追加する</button>
-                    <button onclick="document.getElementById('objection-add-form').style.display='none'" style="padding:8px 16px; background:var(--border); color:var(--text); border:none; border-radius:6px; cursor:pointer;">キャンセル</button>
-                </div>
-            </div>
-
-            <!-- 通常モード -->
-            <div id="objection-list"></div>
-
-            <!-- 通話中モード -->
-            <div id="call-mode" style="display:none;">
-                <div id="call-mode-buttons" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;"></div>
-                <div id="call-mode-response" style="display:none; margin-top:20px; padding:20px; background:var(--primary-light); border-radius:var(--radius); border:2px solid var(--primary);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <h3 id="call-mode-title" style="font-size:18px;"></h3>
-                        <button onclick="closeCallResponse()" style="background:none; border:none; font-size:20px; cursor:pointer; color:var(--text);">✕</button>
-                    </div>
-                    <div id="call-mode-steps" style="font-size:16px; line-height:1.8;"></div>
-                    <div id="call-mode-next" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border);"></div>
-                </div>
-            </div>
         </div>
 
         <!-- Scripts Tab -->
@@ -1991,111 +1919,6 @@
             purpose: "ストレートにアポを切る。「15分」「オンライン」でハードルを下げる。",
             followUp: "断られた場合→「では、まずは資料をお送りして、ご興味があればお時間をいただく形でいかがでしょうか？」",
             timing: "十分にニーズを掘り起こせたタイミングで。"
-        }
-    ];
-
-    let objectionData = [
-        {
-            emoji: "😤",
-            category: "時間がない",
-            phrase: "「今忙しいので…」",
-            response: "「お忙しいところ大変失礼いたしました。1分だけお時間いただけますか？内定辞退された学生さんと再度つながれるサービスのご案内でして…」",
-            nextQuestion: "「改めてお電話させていただきたいのですが、ご都合の良いお時間帯はございますか？」",
-            steps: [
-                { label: "共感する", text: "「お忙しいところ大変失礼いたしました。」" },
-                { label: "時間を限定", text: "「1分だけお時間いただけますか？」" },
-                { label: "価値を伝える", text: "「内定辞退された学生さんと再度つながれるサービスのご案内でして…」" },
-                { label: "代替提案", text: "「改めてお電話させていただきたいのですが、ご都合の良いお時間帯はございますか？」" }
-            ]
-        },
-        {
-            emoji: "🙅",
-            category: "必要ない",
-            phrase: "「間に合っています／辞退者はほとんどいません」",
-            response: "「承知いたしました。素晴らしいことですね。年に数名でも辞退者がいらっしゃれば、一度は御社に魅力を感じた方です。実際に年間5名程度の辞退者から採用に至った企業様もいらっしゃいます。」",
-            nextQuestion: "「辞退者活用の最新トレンド資料をお送りできますが、いかがですか？」",
-            steps: [
-                { label: "受け止める", text: "「承知いたしました。内定辞退が少ないのは素晴らしいことですね。」" },
-                { label: "視点を変える", text: "「年に数名でも辞退者がいらっしゃれば、その方々は一度は御社に魅力を感じた方です。」" },
-                { label: "実例で刺す", text: "「実際に年間5名程度の辞退者から採用に至った企業様もいらっしゃいます。」" },
-                { label: "情報提供", text: "「辞退者活用の最新トレンド資料をお送りできますが、いかがですか？」" }
-            ]
-        },
-        {
-            emoji: "🤷",
-            category: "自社対応",
-            phrase: "「自社でもフォローできるので…」",
-            response: "「おっしゃる通りです。ただ、一度辞退した企業から直接連絡が来ると『気まずい』と感じる学生が多いのが実情です。弊社のような第三者が間に入ることで、心理的ハードルを下げられます。」",
-            nextQuestion: "「一度、詳しい仕組みをお見せしながらご説明させていただけませんか？」",
-            steps: [
-                { label: "肯定する", text: "「おっしゃる通り、自社でフォローされることも可能です。」" },
-                { label: "学生視点を伝える", text: "「ただ、一度辞退した企業から直接連絡が来ると『気まずい』と感じる学生が多いのが実情です。」" },
-                { label: "第三者の価値", text: "「弊社のような第三者が間に入ることで、その心理的ハードルを下げ、スムーズに関係性を維持できます。」" },
-                { label: "具体提案", text: "「一度、詳しい仕組みをお見せしながらご説明させていただけませんか？」" }
-            ]
-        },
-        {
-            emoji: "💰",
-            category: "費用",
-            phrase: "「費用が気になります…」",
-            response: "「費用面は大切なポイントですよね。新たに求人広告を出すコストと比較すると、すでに御社に興味を持った方へのアプローチなので効率的です。」",
-            nextQuestion: "「料金体系は商談時に詳しくご説明させていただきます。まずは情報収集の場としてお時間いただけませんか？」",
-            steps: [
-                { label: "理解を示す", text: "「費用面は大切なポイントですよね。」" },
-                { label: "コスト比較", text: "「新たに求人広告を出して1から母集団を形成するコストと比較すると、すでに御社に興味を持った方へのアプローチなので効率的です。」" },
-                { label: "商談で詳しく", text: "「料金体系は商談時に詳しくご説明させていただきます。まずは情報収集の場としてお時間いただけませんか？」" }
-            ]
-        },
-        {
-            emoji: "📧",
-            category: "資料請求",
-            phrase: "「資料をメールで送ってください」",
-            response: "「かしこまりました。すぐにお送りいたします。的確な資料をお送りしたいのですが、直近の新卒採用で内定辞退は何名くらいいらっしゃいますか？」",
-            nextQuestion: "「資料をお送りした後、翌週あたりにお電話させていただいてもよろしいでしょうか？」",
-            steps: [
-                { label: "承諾する", text: "「かしこまりました。すぐにお送りいたします。」" },
-                { label: "ヒアリング", text: "「的確な資料をお送りしたいのですが、直近の新卒採用で内定辞退は何名くらいいらっしゃいますか？」" },
-                { label: "次のアクションを握る", text: "「資料をお送りした後、翌週あたりにお電話させていただいてもよろしいでしょうか？」" }
-            ]
-        },
-        {
-            emoji: "👔",
-            category: "担当不在",
-            phrase: "「担当者が不在です」",
-            response: "「承知いたしました。新卒採用のご担当者様のお名前を教えていただけますか？何時頃お戻りでしょうか？」",
-            nextQuestion: "「では改めてお電話させていただきます。内定辞退者の再アプローチに関するご提案でお電話した旨、お伝えいただけますと幸いです。」",
-            steps: [
-                { label: "確認する", text: "「承知いたしました。新卒採用のご担当者様のお名前を教えていただけますか？」" },
-                { label: "戻り時間を聞く", text: "「何時頃お戻りでしょうか？」" },
-                { label: "約束を取る", text: "「では改めてお電話させていただきます。」" },
-                { label: "伝言を依頼", text: "「内定辞退者の再アプローチに関するご提案でお電話した旨、お伝えいただけますと幸いです。」" }
-            ]
-        },
-        {
-            emoji: "🔒",
-            category: "個人情報",
-            phrase: "「個人情報が心配です」",
-            response: "「ご心配は当然です。弊社は厚生労働省からHRアワードを受賞しており、情報管理体制は非常にクリアです。学生様ご本人から許諾を得た上で進めます。」",
-            nextQuestion: "「セキュリティ体制について詳しくご説明もできますので、お打ち合わせのお時間をいただけませんか？」",
-            steps: [
-                { label: "共感する", text: "「個人情報の取り扱いについてご心配されるのは当然のことです。」" },
-                { label: "実績で安心感", text: "「弊社は厚生労働省からHRアワードを受賞しており、情報管理体制は非常にクリアです。」" },
-                { label: "許諾プロセス", text: "「学生様ご本人から『ミューズパスを利用すること』への許諾を得た上で進めますので、ご安心ください。」" },
-                { label: "詳細説明の提案", text: "「セキュリティ体制について詳しくご説明もできますので、お打ち合わせのお時間をいただけませんか？」" }
-            ]
-        },
-        {
-            emoji: "🤔",
-            category: "保留",
-            phrase: "「考えておきます」",
-            response: "「ありがとうございます。ちなみにどの部分が気になられましたか？内定辞退者の情報共有や個人情報の面でしょうか？」",
-            nextQuestion: "「まずは15分ほどの情報交換の場として、お話だけでもいかがでしょうか？」",
-            steps: [
-                { label: "具体化する", text: "「ありがとうございます。ちなみにどの部分が気になられましたか？」" },
-                { label: "不安を解消", text: "「内定辞退者の情報共有や個人情報の面でしょうか？」" },
-                { label: "ハードルを下げる", text: "「まずは15分ほどの情報交換の場として、お話だけでもいかがでしょうか？」" },
-                { label: "期限を設ける", text: "「では来週あたりに改めてお電話させていただいてもよろしいですか？」" }
-            ]
         }
     ];
 
@@ -2949,267 +2772,8 @@
         }
     }
 
-    // ===== OBJECTIONS =====
-    let callModeOn = false;
-
-    function renderObjections() {
-        const el = document.getElementById('objection-list');
-        // 既存データに編集上書きを適用、削除済みを除外
-        const objEdits = JSON.parse(localStorage.getItem('teleapo-objection-edits') || '{}');
-        const objDeleted = JSON.parse(localStorage.getItem('teleapo-objection-deleted') || '[]');
-        let allObjections = objectionData.map((o, idx) => {
-            if (objDeleted.includes(idx)) return null;
-            if (objEdits[idx]) {
-                return { ...o, ...objEdits[idx], _builtinIdx: idx };
-            }
-            return { ...o, _builtinIdx: idx };
-        }).filter(o => o !== null);
-        // カスタム追加分をマージ
-        try {
-            const customObjections = JSON.parse(localStorage.getItem('teleapo-custom-objection') || '[]');
-            allObjections = allObjections.concat(customObjections);
-        } catch(e) {}
-
-        el.innerHTML = allObjections.map((o, i) => {
-            const isBuiltin = o._builtinIdx !== undefined;
-            const itemKey = isBuiltin ? 'builtin-' + o._builtinIdx : 'custom-' + o.customId;
-            const deleteCall = isBuiltin ? `deleteBuiltinObjection(${o._builtinIdx})` : (o.customId ? `deleteObjectionItem(${o.customId})` : '');
-            return `
-            <div class="objection-card" id="obj-item-${itemKey}">
-                <div class="objection-header" style="display:flex; justify-content:space-between; align-items:center; gap:8px; cursor:pointer;" onclick="this.parentElement.classList.toggle('open')">
-                    <div style="display:flex; align-items:center; gap:8px; flex:1;">
-                        <span>${escapeHTML(o.phrase)}</span>
-                    </div>
-                    <div style="display:flex; gap:4px;">
-                        <button onclick="event.stopPropagation(); startObjInlineEdit('${itemKey}', ${isBuiltin ? o._builtinIdx : -1}, ${o.customId || 0});" style="background:none; border:none; font-size:14px; cursor:pointer; padding:4px;" title="編集">✏️</button>
-                        <button onclick="event.stopPropagation(); ${deleteCall};" style="background:none; border:none; font-size:14px; cursor:pointer; padding:4px;" title="削除">🗑️</button>
-                        <span class="qa-toggle">▼</span>
-                    </div>
-                </div>
-                <div class="objection-body">
-                    ${(o.steps || []).map((s, j) => `
-                        <div class="response-step">
-                            <div class="step-num">${j + 1}</div>
-                            <div class="step-content"><strong>${escapeHTML(s.label)}：</strong>${escapeHTML(s.text)}</div>
-                        </div>
-                    `).join('')}
-                </div>
-                <div id="obj-edit-${itemKey}" style="display:none;"></div>
-            </div>
-            `;
-        }).join('');
-
-        renderCallModeButtons();
-    }
-
-    function startObjInlineEdit(itemKey, builtinIdx, customId) {
-        const editDiv = document.getElementById('obj-edit-' + itemKey);
-        const card = document.getElementById('obj-item-' + itemKey);
-        if (!editDiv || !card) return;
-
-        let current;
-        if (builtinIdx >= 0) {
-            const objEdits = JSON.parse(localStorage.getItem('teleapo-objection-edits') || '{}');
-            current = objEdits[builtinIdx] ? { ...objectionData[builtinIdx], ...objEdits[builtinIdx] } : objectionData[builtinIdx];
-        } else {
-            const customObj = JSON.parse(localStorage.getItem('teleapo-custom-objection') || '[]');
-            current = customObj.find(o => o.customId === customId);
-            if (!current) return;
-        }
-
-        card.classList.add('open');
-
-        // ステップを編集フォームに展開
-        let stepsHtml = '';
-        (current.steps || []).forEach((s, j) => {
-            stepsHtml += `
-                <div class="obj-edit-step" style="margin-bottom:8px; padding:8px; background:var(--bg); border-radius:6px; border:1px solid var(--border);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                        <span style="font-size:12px; font-weight:600; color:var(--text-secondary);">ステップ${j + 1}</span>
-                        <button type="button" onclick="this.closest('.obj-edit-step').remove()" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:12px;">✕ 削除</button>
-                    </div>
-                    <input type="text" value="${escapeHTML(s.label)}" placeholder="ラベル（例：共感）" class="obj-edit-step-label-${itemKey}" style="width:100%; padding:6px; margin-bottom:4px; border:1px solid var(--border); border-radius:4px; background:var(--card); color:var(--text); font-size:13px;">
-                    <textarea placeholder="トーク内容" class="obj-edit-step-text-${itemKey}" rows="2" style="width:100%; padding:6px; border:1px solid var(--border); border-radius:4px; background:var(--card); color:var(--text); font-size:13px;">${escapeHTML(s.text)}</textarea>
-                </div>
-            `;
-        });
-
-        editDiv.style.display = 'block';
-        editDiv.style.cssText = 'display:block; padding:12px 16px; background:var(--accent-light); border-top:1px solid var(--border); border-radius:0 0 var(--radius) var(--radius);';
-        editDiv.innerHTML = `
-            <h4 style="margin-bottom:8px; font-size:14px;">✏️ この切り返しを編集</h4>
-            <div style="margin-bottom:8px;">
-                <label style="display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:2px;">カテゴリ</label>
-                <input type="text" id="obj-edit-category-${itemKey}" value="${escapeHTML(current.category)}" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--card); color:var(--text); font-size:14px;">
-            </div>
-            <div style="margin-bottom:8px;">
-                <label style="display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:2px;">フレーズ（相手の言葉）</label>
-                <input type="text" id="obj-edit-phrase-${itemKey}" value="${escapeHTML(current.phrase)}" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--card); color:var(--text); font-size:14px;">
-            </div>
-            <div style="margin-bottom:8px;">
-                <label style="display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">ステップ（トークの流れ）</label>
-                <div id="obj-edit-steps-${itemKey}">${stepsHtml}</div>
-                <button type="button" onclick="addObjEditStep('${itemKey}')" style="padding:6px 12px; background:var(--border); color:var(--text); border:none; border-radius:6px; cursor:pointer; font-size:12px; margin-top:4px;">＋ ステップを追加</button>
-            </div>
-            <div style="display:flex; gap:8px; margin-top:10px;">
-                <button onclick="saveObjInlineEdit('${itemKey}', ${builtinIdx}, ${customId})" style="padding:8px 16px; background:var(--primary); color:white; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600;">保存する</button>
-                <button onclick="cancelObjInlineEdit('${itemKey}')" style="padding:8px 16px; background:var(--border); color:var(--text); border:none; border-radius:6px; cursor:pointer; font-size:13px;">キャンセル</button>
-            </div>
-        `;
-    }
-
-    function addObjEditStep(itemKey) {
-        const container = document.getElementById('obj-edit-steps-' + itemKey);
-        if (!container) return;
-        const num = container.children.length + 1;
-        const div = document.createElement('div');
-        div.className = 'obj-edit-step';
-        div.style.cssText = 'margin-bottom:8px; padding:8px; background:var(--bg); border-radius:6px; border:1px solid var(--border);';
-        div.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <span style="font-size:12px; font-weight:600; color:var(--text-secondary);">ステップ${num}</span>
-                <button type="button" onclick="this.closest('.obj-edit-step').remove()" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:12px;">✕ 削除</button>
-            </div>
-            <input type="text" value="" placeholder="ラベル（例：切り返し）" class="obj-edit-step-label-${itemKey}" style="width:100%; padding:6px; margin-bottom:4px; border:1px solid var(--border); border-radius:4px; background:var(--card); color:var(--text); font-size:13px;">
-            <textarea placeholder="トーク内容" class="obj-edit-step-text-${itemKey}" rows="2" style="width:100%; padding:6px; border:1px solid var(--border); border-radius:4px; background:var(--card); color:var(--text); font-size:13px;"></textarea>
-        `;
-        container.appendChild(div);
-    }
-
-    function saveObjInlineEdit(itemKey, builtinIdx, customId) {
-        const category = document.getElementById('obj-edit-category-' + itemKey).value.trim();
-        const phrase = document.getElementById('obj-edit-phrase-' + itemKey).value.trim();
-
-        if (!category || !phrase) { alert('カテゴリとフレーズを入力してください'); return; }
-
-        // ステップを収集
-        const labels = Array.from(document.querySelectorAll('.obj-edit-step-label-' + itemKey)).map(el => el.value.trim());
-        const texts = Array.from(document.querySelectorAll('.obj-edit-step-text-' + itemKey)).map(el => el.value.trim());
-        const steps = [];
-        for (let i = 0; i < labels.length; i++) {
-            if (labels[i] || texts[i]) {
-                steps.push({ label: labels[i] || '', text: texts[i] || '' });
-            }
-        }
-
-        try {
-            if (builtinIdx >= 0) {
-                const objEdits = JSON.parse(localStorage.getItem('teleapo-objection-edits') || '{}');
-                objEdits[builtinIdx] = { category, phrase, steps };
-                localStorage.setItem('teleapo-objection-edits', JSON.stringify(objEdits));
-                if (firebaseReady && db) db.ref('shared/teleapo-objection-edits').set(objEdits).catch(function(e){});
-            } else {
-                let customObj = JSON.parse(localStorage.getItem('teleapo-custom-objection') || '[]');
-                const item = customObj.find(o => o.customId === customId);
-                if (item) {
-                    item.category = category;
-                    item.phrase = phrase;
-                    item.steps = steps;
-                    localStorage.setItem('teleapo-custom-objection', JSON.stringify(customObj));
-                    if (firebaseReady && db) db.ref('shared/teleapo-custom-objection').set(customObj).catch(function(e){});
-                }
-            }
-            renderObjections();
-            alert('保存しました！');
-        } catch(e) {
-            console.error('Error saving objection edit:', e);
-        }
-    }
-
-    function cancelObjInlineEdit(itemKey) {
-        const editDiv = document.getElementById('obj-edit-' + itemKey);
-        if (editDiv) { editDiv.style.display = 'none'; editDiv.innerHTML = ''; }
-    }
-
-    function toggleCallMode() {
-        callModeOn = !callModeOn;
-        const btn = document.getElementById('call-mode-toggle');
-        const normalList = document.getElementById('objection-list');
-        const callMode = document.getElementById('call-mode');
-        const desc = document.getElementById('objection-desc');
-
-        if (callModeOn) {
-            btn.textContent = '📖 通常モードに戻す';
-            btn.style.background = 'var(--danger)';
-            normalList.style.display = 'none';
-            callMode.style.display = 'block';
-            desc.textContent = '通話中モード：大きなボタンをタップして、即座に切り返しフレーズを確認できます。';
-        } else {
-            btn.textContent = '📞 通話中モード ON';
-            btn.style.background = '';
-            normalList.style.display = '';
-            callMode.style.display = 'none';
-            desc.textContent = '断られたときの対応フレーズ集です。落ち着いて、まず共感してから切り返しましょう。';
-            document.getElementById('call-mode-response').style.display = 'none';
-        }
-    }
-
-    function getAllObjectionsMerged() {
-        const objEdits = JSON.parse(localStorage.getItem('teleapo-objection-edits') || '{}');
-        const objDeleted = JSON.parse(localStorage.getItem('teleapo-objection-deleted') || '[]');
-        let all = objectionData.map((o, idx) => {
-            if (objDeleted.includes(idx)) return null;
-            if (objEdits[idx]) return { ...o, ...objEdits[idx] };
-            return { ...o };
-        }).filter(o => o !== null);
-        try {
-            const custom = JSON.parse(localStorage.getItem('teleapo-custom-objection') || '[]');
-            all = all.concat(custom);
-        } catch(e) {}
-        return all;
-    }
-
-    function renderCallModeButtons() {
-        const el = document.getElementById('call-mode-buttons');
-        const allObjections = getAllObjectionsMerged();
-
-        el.innerHTML = allObjections.map((o, i) => `
-            <button onclick="showCallResponse(${i}, false)" style="
-                padding:20px 16px; font-size:18px; border-radius:var(--radius);
-                border:2px solid var(--border); background:var(--card); color:var(--text);
-                cursor:pointer; text-align:center; transition:all 0.2s;
-                min-height:80px; display:flex; align-items:center; justify-content:center; gap:8px;
-            " onmouseover="this.style.borderColor='var(--primary)';this.style.background='var(--primary-light)'"
-               onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--card)'">
-                <span>${escapeHTML(o.category)}</span>
-            </button>
-        `).join('');
-    }
-
-    function showCallResponse(idx, isCustom) {
-        const allObjections = getAllObjectionsMerged();
-        const o = allObjections[idx];
-        if (!o) return;
-
-        const respDiv = document.getElementById('call-mode-response');
-        respDiv.style.display = 'block';
-
-        document.getElementById('call-mode-title').textContent = o.phrase;
-
-        const stepsEl = document.getElementById('call-mode-steps');
-        stepsEl.innerHTML = '';
-        const responseP = document.createElement('div');
-        responseP.style.cssText = 'font-size:17px; line-height:1.8; margin-bottom:8px;';
-        responseP.textContent = o.response;
-        stepsEl.appendChild(responseP);
-
-        const nextEl = document.getElementById('call-mode-next');
-        nextEl.innerHTML = '';
-        const nextLabel = document.createElement('div');
-        nextLabel.style.cssText = 'font-size:13px; font-weight:600; color:var(--primary); margin-bottom:4px;';
-        nextLabel.textContent = '➡️ 次の質問：';
-        const nextText = document.createElement('div');
-        nextText.style.cssText = 'font-size:16px; line-height:1.6;';
-        nextText.textContent = o.nextQuestion;
-        nextEl.appendChild(nextLabel);
-        nextEl.appendChild(nextText);
-
-        respDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    function closeCallResponse() {
-        document.getElementById('call-mode-response').style.display = 'none';
-    }
+    // renderObjections is kept as no-op for backward compatibility with sync calls
+    function renderObjections() {}
 
     // ===== GROWTH SUPPORT =====
     function getNextAction(stats) {
@@ -3235,7 +2799,7 @@
         }
 
         if (apoRate < 10) {
-            return "アポ率が " + apoRate.toFixed(1) + "% です。「切り返しトーク集」を通話前に確認して、反論への準備を強化しましょう。";
+            return "アポ率が " + apoRate.toFixed(1) + "% です。Q&Aや深堀り質問を通話前に確認して、反論への準備を強化しましょう。";
         }
 
         if (stats.qaViews < 10) {
@@ -4487,138 +4051,6 @@
         }
     }
 
-    // ===== OBJECTION FUNCTIONS =====
-    function showAddObjectionForm() {
-        document.getElementById('objection-add-form').style.display = 'block';
-    }
-
-    function addObjectionStep() {
-        const container = document.getElementById('add-objection-steps');
-        const stepNum = container.children.length + 1;
-
-        const stepDiv = document.createElement('div');
-        stepDiv.style.cssText = 'margin-bottom:8px; padding:8px; background:var(--bg); border-radius:4px;';
-        stepDiv.innerHTML = `
-            <div style="display:flex; gap:4px; margin-bottom:4px;">
-                <label style="font-size:12px; color:var(--text-secondary);">ステップ${stepNum}</label>
-                <button type="button" onclick="this.parentElement.parentElement.remove()" style="margin-left:auto; background:none; border:none; color:var(--danger); cursor:pointer; padding:0;">✕</button>
-            </div>
-            <input type="text" placeholder="ラベル（例：共感）" class="objection-step-label" style="width:100%; padding:6px; margin-bottom:4px; border:1px solid var(--border); border-radius:4px; background:var(--card); color:var(--text); font-size:12px;">
-            <textarea placeholder="説明" class="objection-step-text" rows="2" style="width:100%; padding:6px; border:1px solid var(--border); border-radius:4px; background:var(--card); color:var(--text); font-size:12px;"></textarea>
-        `;
-        container.appendChild(stepDiv);
-    }
-
-    function addObjectionItem() {
-        const phrase = document.getElementById('add-objection-phrase').value.trim();
-        const category = document.getElementById('add-objection-category').value.trim();
-        const response = document.getElementById('add-objection-response').value.trim();
-        const nextQ = document.getElementById('add-objection-nextq').value.trim();
-
-        if (!phrase || !category || !response) {
-            alert('必須フィールドを入力してください');
-            return;
-        }
-
-        // Get steps
-        const stepLabels = Array.from(document.querySelectorAll('.objection-step-label')).map(el => el.value.trim());
-        const stepTexts = Array.from(document.querySelectorAll('.objection-step-text')).map(el => el.value.trim());
-        const steps = [];
-        for (let i = 0; i < Math.max(stepLabels.length, stepTexts.length); i++) {
-            if (stepLabels[i] || stepTexts[i]) {
-                steps.push({
-                    label: stepLabels[i] || '',
-                    text: stepTexts[i] || ''
-                });
-            }
-        }
-
-        try {
-            let customObjections = JSON.parse(localStorage.getItem('teleapo-custom-objection') || '[]');
-            const id = Date.now();
-            customObjections.push({
-                customId: id,
-                phrase: phrase,
-                category: category,
-                steps: steps,
-                response: response,
-                nextQuestion: nextQ
-            });
-            localStorage.setItem('teleapo-custom-objection', JSON.stringify(customObjections));
-            if (firebaseReady && db) db.ref('shared/teleapo-custom-objection').set(customObjections).catch(function(e){});
-
-            // Reset form
-            document.getElementById('add-objection-phrase').value = '';
-            document.getElementById('add-objection-category').value = '';
-            document.getElementById('add-objection-steps').innerHTML = '';
-            document.getElementById('add-objection-response').value = '';
-            document.getElementById('add-objection-nextq').value = '';
-            document.getElementById('objection-add-form').style.display = 'none';
-
-            renderObjections();
-            alert('切り返しフレーズを追加しました！');
-        } catch(e) {
-            console.error('Error adding objection item:', e);
-        }
-    }
-
-    function editObjectionItem(id) {
-        try {
-            let customObjections = JSON.parse(localStorage.getItem('teleapo-custom-objection') || '[]');
-            const item = customObjections.find(o => o.customId === id);
-            if (!item) return;
-
-            showEditModal('切り返し編集', [
-                {label: 'フレーズ', value: item.phrase, type: 'text'},
-                {label: 'カテゴリ', value: item.category, type: 'text'},
-                {label: '対応フレーズ', value: item.response, type: 'text'},
-                {label: '次の質問', value: item.nextQuestion || '', type: 'text'}
-            ], function(results) {
-                item.phrase = results[0];
-                item.category = results[1];
-                item.response = results[2];
-                item.nextQuestion = results[3];
-
-                localStorage.setItem('teleapo-custom-objection', JSON.stringify(customObjections));
-                if (firebaseReady && db) db.ref('shared/teleapo-custom-objection').set(customObjections).catch(function(e){});
-                renderObjections();
-                alert('切り返しフレーズを更新しました！');
-            });
-        } catch(e) {
-            console.error('Error editing objection item:', e);
-        }
-    }
-
-    function deleteObjectionItem(id) {
-        if (!confirm('この切り返しフレーズを削除しますか？')) return;
-        try {
-            let customObjections = JSON.parse(localStorage.getItem('teleapo-custom-objection') || '[]');
-            customObjections = customObjections.filter(o => o.customId !== id);
-            localStorage.setItem('teleapo-custom-objection', JSON.stringify(customObjections));
-            if (firebaseReady && db) db.ref('shared/teleapo-custom-objection').set(customObjections).catch(function(e){});
-            renderObjections();
-        } catch(e) {
-            console.error('Error deleting objection item:', e);
-        }
-    }
-
-    function deleteBuiltinObjection(idx) {
-        if (!confirm('この切り返しフレーズを削除しますか？')) return;
-        try {
-            let deleted = JSON.parse(localStorage.getItem('teleapo-objection-deleted') || '[]');
-            if (!deleted.includes(idx)) deleted.push(idx);
-            localStorage.setItem('teleapo-objection-deleted', JSON.stringify(deleted));
-            if (firebaseReady && db) db.ref('shared/teleapo-objection-deleted').set(deleted).catch(function(e){});
-            let edits = JSON.parse(localStorage.getItem('teleapo-objection-edits') || '{}');
-            delete edits[idx];
-            localStorage.setItem('teleapo-objection-edits', JSON.stringify(edits));
-            if (firebaseReady && db) db.ref('shared/teleapo-objection-edits').set(edits).catch(function(e){});
-            renderObjections();
-        } catch(e) {
-            console.error('Error deleting builtin objection:', e);
-        }
-    }
-
     // ===== COMMENTS =====
     let activeCommentFilter = 'all';
 
@@ -4874,7 +4306,6 @@
         const files = {
             qaData: 'data/qaData.json',
             digData: 'data/digData.json',
-            objectionData: 'data/objectionData.json',
             motivationQuotes: 'data/motivationQuotes.json',
             tips: 'data/tips.json'
         };
@@ -4886,7 +4317,6 @@
                     switch(key) {
                         case 'qaData': qaData = data; break;
                         case 'digData': digData = data; break;
-                        case 'objectionData': objectionData = data; break;
                         case 'motivationQuotes': motivationQuotes = data; break;
                         case 'tips': tips = data; break;
                     }
