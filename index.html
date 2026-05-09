@@ -2162,6 +2162,8 @@
                     if (fbData && fbData.scouter && fbData.scouter.checks) {
                         scouterChecks = fbData.scouter.checks;
                         try { localStorage.setItem('teleapo-scouter-' + currentUser, JSON.stringify(scouterChecks)); } catch(e2) {}
+                    } else {
+                        loadScouterFromLocal();
                     }
                     state.qaViews = localState.qaViews || 0;
                     state.fontSize = localState.fontSize || 14;
@@ -2171,14 +2173,18 @@
                     renderScouter();
                 }).catch(function(e) {
                     state = localState;
+                    loadScouterFromLocal();
                     syncUserToFirebase();
                     renderDashboard();
                     renderTeam();
+                    renderScouter();
                 });
             } else {
                 state = localState;
+                loadScouterFromLocal();
                 renderDashboard();
                 renderTeam();
+                renderScouter();
             }
 
             syncAllSharedDataFromFirebase();
