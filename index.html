@@ -3014,6 +3014,7 @@
                 total: total,
                 updatedAt: new Date().toISOString()
             }).then(function() {
+                renderTeam();
                 alert('戦闘力を保存しました！チームタブで全員の戦闘力を確認できます 💪');
             }).catch(function(e) {
                 console.error('Scouter save error:', e);
@@ -3756,6 +3757,20 @@
     function renderTeamScouter(firebaseData) {
         var el = document.getElementById('team-scouter-ranking');
         if (!el) return;
+
+        // firebaseDataが渡されていなければ自分でFirebaseから取得する
+        if (!firebaseData && firebaseReady && db) {
+            db.ref('users').once('value').then(function(snapshot) {
+                renderTeamScouterWithData(snapshot.val(), el);
+            }).catch(function() {
+                renderTeamScouterWithData(null, el);
+            });
+        } else {
+            renderTeamScouterWithData(firebaseData, el);
+        }
+    }
+
+    function renderTeamScouterWithData(firebaseData, el) {
         var rankings = [];
         if (firebaseData) {
             Object.keys(firebaseData).forEach(function(key) {
