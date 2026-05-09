@@ -1030,6 +1030,9 @@
 <div class="nav-item" onclick="switchTab('scripts', this)">
             <span class="nav-icon">📝</span>スクリプト
         </div>
+        <div class="nav-item" onclick="switchTab('scouter', this)">
+            <span class="nav-icon">⚡</span>戦闘力
+        </div>
         <div class="nav-item" onclick="switchTab('dashboard', this)">
             <span class="nav-icon">📊</span>成長記録
         </div>
@@ -1129,6 +1132,30 @@
             <div id="scripts-list"></div>
         </div>
 
+        <!-- Scouter Tab -->
+        <div id="tab-scouter" class="tab-content">
+            <h2 style="margin-bottom:4px; font-size:18px;">⚡ IS戦闘力スカウター</h2>
+            <p style="margin-bottom:16px; color:var(--text-secondary); font-size:13px;">MusePass版 現場最適化モデル（計100＋20点）<br>該当するレベルにチェックを入れると合計戦闘力が算出されます。</p>
+
+            <!-- 合計スコア表示 -->
+            <div id="scouter-total-area" style="background:linear-gradient(135deg, var(--primary), #6c5ce7); border-radius:var(--radius); padding:24px; margin-bottom:24px; color:white; text-align:center; box-shadow:0 4px 15px rgba(108,92,231,0.3);">
+                <div style="font-size:13px; opacity:0.9; margin-bottom:4px;">あなたの戦闘力</div>
+                <div id="scouter-total-score" style="font-size:56px; font-weight:800; line-height:1;">0</div>
+                <div style="font-size:14px; opacity:0.8; margin-top:4px;">/ 120 点</div>
+                <div id="scouter-rank" style="margin-top:8px; font-size:15px; font-weight:600;"></div>
+                <div id="scouter-bar-wrap" style="margin-top:12px; background:rgba(255,255,255,0.2); border-radius:10px; height:12px; overflow:hidden;">
+                    <div id="scouter-bar" style="height:100%; background:white; border-radius:10px; transition:width 0.5s ease; width:0%;"></div>
+                </div>
+            </div>
+
+            <div id="scouter-categories"></div>
+
+            <div style="margin-top:20px; display:flex; gap:8px;">
+                <button onclick="saveScouterToFirebase()" style="flex:1; padding:14px; background:var(--primary); color:white; border:none; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;">💾 戦闘力を保存・共有</button>
+                <button onclick="resetScouter()" style="padding:14px 20px; background:var(--border); color:var(--text); border:none; border-radius:8px; font-size:15px; cursor:pointer;">リセット</button>
+            </div>
+        </div>
+
         <!-- Dashboard Tab -->
         <div id="tab-dashboard" class="tab-content">
             <h2 style="margin-bottom:16px; font-size:18px;">💰 アポ取得単価ダッシュボード</h2>
@@ -1198,6 +1225,10 @@
             <h3 style="margin:24px 0 10px; font-size:16px;">📅 月別メンバー活動記録</h3>
             <div id="team-month-selector" style="margin-bottom:12px;"></div>
             <div id="team-daily-log"></div>
+
+            <!-- チーム戦闘力ランキング -->
+            <h3 style="margin:30px 0 12px; font-size:16px;">⚡ チーム戦闘力ランキング</h3>
+            <div id="team-scouter-ranking"></div>
         </div>
 
         <!-- Comments Tab -->
@@ -2127,11 +2158,17 @@
                     } else {
                         state.monthlyRecords = localState.monthlyRecords || {};
                     }
+                    // スカウターデータ復元（Firebase優先）
+                    if (fbData && fbData.scouter && fbData.scouter.checks) {
+                        scouterChecks = fbData.scouter.checks;
+                        try { localStorage.setItem('teleapo-scouter-' + currentUser, JSON.stringify(scouterChecks)); } catch(e2) {}
+                    }
                     state.qaViews = localState.qaViews || 0;
                     state.fontSize = localState.fontSize || 14;
                     saveState();
                     renderDashboard();
                     renderTeam();
+                    renderScouter();
                 }).catch(function(e) {
                     state = localState;
                     syncUserToFirebase();
@@ -2247,23 +2284,35 @@
                 } else {
                     state.monthlyRecords = localState.monthlyRecords || {};
                 }
+                // スカウターデータ復元（Firebase優先）
+                if (fbData && fbData.scouter && fbData.scouter.checks) {
+                    scouterChecks = fbData.scouter.checks;
+                    try { localStorage.setItem('teleapo-scouter-' + currentUser, JSON.stringify(scouterChecks)); } catch(e2) {}
+                } else {
+                    loadScouterFromLocal();
+                }
                 state.qaViews = localState.qaViews || 0;
                 state.fontSize = localState.fontSize || 14;
                 // 保存してレンダリング
                 saveState();
                 renderDashboard();
                 renderTeam();
+                renderScouter();
             }).catch(function(e) {
                 console.error('Firebase user data load error:', e);
                 state = localState;
+                loadScouterFromLocal();
                 syncUserToFirebase();
                 renderDashboard();
                 renderTeam();
+                renderScouter();
             });
         } else {
             state = localState;
+            loadScouterFromLocal();
             renderDashboard();
             renderTeam();
+            renderScouter();
         }
 
         syncAllSharedDataFromFirebase();
@@ -2774,6 +2823,222 @@
 
     // renderObjections is kept as no-op for backward compatibility with sync calls
     function renderObjections() {}
+
+    // ===== SCOUTER (IS戦闘力スカウター) =====
+    const scouterCategories = [
+        {
+            id: 'cat1', title: '1. 架電先の選定・事前準備', maxBase: 15, maxBonus: 5,
+            intent: '架電スピードを落とさず、数秒〜数十秒で最低限の「当たり」をつけるスキル',
+            levels: [
+                { id: 'c1_lv1', label: 'Lv1（10点）', points: 10, desc: 'リストの上から順に、事前情報を一切見ずに架電している。（質より完全に行動量のみのフェーズ）' },
+                { id: 'c1_lv2', label: 'Lv2（15点）', points: 15, desc: '架電前の10〜20秒で、採用ページや求人媒体をサッと確認し「募集職種・採用規模」や「業界・業種」から辞退者がいそうな企業or辞退者活用のニーズがありそうな企業を判別してからかけている。' }
+            ],
+            bonus: { id: 'c1_bonus', label: '🔥（＋5点）', points: 5, desc: '過去の架電履歴（過去の断り理由や最終接触日）を瞬時に確認し前回の架電内容を数秒で確認しトークに文脈を持たせ、無駄打ちを防いでいる。' }
+        },
+        {
+            id: 'cat2', title: '2. ヒアリング・課題の表面化', maxBase: 15, maxBonus: 5,
+            intent: '誰もが直面する「採用活動」に関する普遍的な会話のキャッチボール能力',
+            levels: [
+                { id: 'c2_lv1', label: 'Lv1（3点）', points: 3, desc: 'スクリプトを読み上げることに必死で、相手の返答に対して「あ、はい」としか返せず、会話のキャッチボールが成立していない。' },
+                { id: 'c2_lv2', label: 'Lv2（7点）', points: 7, desc: '「辞退者はいますか？」「採用予定人数は？」など、一問一答形式（尋問形式）で単発的に事実確認を行っている。' },
+                { id: 'c2_lv3', label: 'Lv3（15点）', points: 15, desc: '「ちなみに、辞退された方とはその後どうされていますか？」「採用単価はいかがですか？」など、相手の採用フローのボトルネックを会話の中で自然に聞けている。' }
+            ],
+            bonus: { id: 'c2_bonus', label: '🔥（＋5点）', points: 5, desc: '相手が会話に乗り気でなくてもボールを投げ続け、担当者が無意識にこぼす「本音のペイン（他社ツールの不満など）」を拾い上げている。' }
+        },
+        {
+            id: 'cat3', title: '3. 興味付け・トーク展開', maxBase: 15, maxBonus: 0,
+            intent: '小難しい啓蒙ではなく、相手の反応に合わせた臨機応変なトークの切り替え',
+            levels: [
+                { id: 'c3_lv1', label: 'Lv1（3点）', points: 3, desc: '早口・棒読みすぎて、相手に話を聞く姿勢（聞く耳）を作らせることができていない。' },
+                { id: 'c3_lv2', label: 'Lv2（7点）', points: 7, desc: 'サービス概要が説明できているかつ、相手も聞く姿勢に入っている。' },
+                { id: 'c3_lv3', label: 'Lv3（15点）', points: 15, desc: '相手の反応（言葉尻や声のトーン）が薄いと察知した際、即座に「採用コストの削減」など別のアプローチ軸にトークを切り替え、興味のフックを探り当てることができる。' }
+            ],
+            bonus: null
+        },
+        {
+            id: 'cat4', title: '4. 価値訴求・メリット提示', maxBase: 15, maxBonus: 0,
+            intent: '相手の口から出た課題と、MusePassの提供価値をシンプルに結びつける力',
+            levels: [
+                { id: 'c4_lv1', label: 'Lv1（3点）', points: 3, desc: 'そもそもの商材理解が低く、うまく説明できていない。' },
+                { id: 'c4_lv2', label: 'Lv2（7点）', points: 7, desc: 'MusePassでできること（機能面）をカタログ的に羅列して伝えている。' },
+                { id: 'c4_lv3', label: 'Lv3（15点）', points: 15, desc: 'ヒアリングで出た相手の状況（例：「辞退者が多い」）に対し、「だからこそMusePassがお役に立てます」といったロジックの通ったトークになっている。' }
+            ],
+            bonus: null
+        },
+        {
+            id: 'cat5', title: '5. 懸念払拭・QA対応', maxBase: 15, maxBonus: 5,
+            intent: '完璧な正解がなくても、会話を途切れさせずネガティブ反応を和らげる力',
+            levels: [
+                { id: 'c5_lv1', label: 'Lv1（3点）', points: 3, desc: '質問や懸念に対して言葉に詰まる、または「担当に確認します」と会話を終わらせてしまうことが多い。' },
+                { id: 'c5_lv2', label: 'Lv2（7点）', points: 7, desc: '「個人情報はどうなるの？」「他のシステムと何が違うの？」といった頻出の質問に対し、自分の言葉で大枠の回答ができ、会話を前に進められる。' },
+                { id: 'c5_lv3', label: 'Lv3（15点）', points: 15, desc: 'マニュアルにあるような基本的な質問には答えられるのに加えて、想定外の質問でも即座に適切な答えを用意できる。' }
+            ],
+            bonus: { id: 'c5_bonus', label: '🔥（＋5点）', points: 5, desc: '相手からのネガティブな反応に対し、「そうですよね、多くの方が最初はそうおっしゃいます。ですが～」とクッション言葉（Yes, But話法）を自然に挟み、相手を否定せずに自社の強みへ着地させることができる。' }
+        },
+        {
+            id: 'cat6', title: '6. アポ打診・クロージング', maxBase: 10, maxBonus: 0,
+            intent: '相手が断る理由を一つずつ潰し、心理的ハードルを極限まで下げる技術',
+            levels: [
+                { id: 'c6_lv1', label: 'Lv1（3点）', points: 3, desc: '相手が電話を切ろうとしているのに気づかず話し続けるか、逆に怖気付いてアポ打診の言葉を言えずに自分から電話を終えてしまう。' },
+                { id: 'c6_lv2', label: 'Lv2（6点）', points: 6, desc: '「一度お打ち合わせを」「詳しくご説明させてください」と、単調な打診のみを行っている。' },
+                { id: 'c6_lv3', label: 'Lv3（10点）', points: 10, desc: '相手の断り文句（「今は忙しい」「間に合っている」）に対し、「では60分ではなく30分で」「情報収集として」「他社様の事例をお見せするだけでも」と、相手が断りにくい理由を添えて打診している。' }
+            ],
+            bonus: null
+        },
+        {
+            id: 'cat7', title: '7. 記録・ネクストアクション設計', maxBase: 15, maxBonus: 5,
+            intent: '個人の行動結果を、組織の資産・次回の架電リストとして昇華させる力',
+            levels: [
+                { id: 'c7_lv1', label: 'Lv1（3点）', points: 3, desc: '架電結果の入力すら漏れている、または「NG」とだけ書き、誰と何を話したか・なぜ断られたのかを一切記録に残していない。' },
+                { id: 'c7_lv2', label: 'Lv2（7点）', points: 7, desc: '架電結果（留守、NG、アポ獲得）のみをスプシ（SFA）に入力している。' },
+                { id: 'c7_lv3', label: 'Lv3（15点）', points: 15, desc: '断られた理由やヒアリング内容を残し、次回の架電時期（〇ヶ月後など）やアプローチ方針を設定している。' }
+            ],
+            bonus: { id: 'c7_bonus', label: '🔥（＋5点）', points: 5, desc: '個人の失注・成功要因を抽象化し、トークの改善案としてチーム全体に還元している。orアポをトスして終わりではなく、FSから「商談で何が刺さったか」のフィードバックを自ら取りに行き、次の架電リストやトークに即座に反映させている。' }
+        }
+    ];
+
+    let scouterChecks = {};
+
+    function renderScouter() {
+        const container = document.getElementById('scouter-categories');
+        if (!container) return;
+
+        container.innerHTML = scouterCategories.map(cat => {
+            const maxTotal = cat.maxBase + cat.maxBonus;
+            return `
+            <div style="background:var(--card); border-radius:var(--radius); padding:16px 20px; margin-bottom:14px; box-shadow:var(--shadow); border:1px solid var(--border);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <h3 style="font-size:15px; font-weight:700;">${escapeHTML(cat.title)}</h3>
+                    <span id="cat-score-${cat.id}" style="font-size:14px; font-weight:700; color:var(--primary);">0 / ${maxTotal}点</span>
+                </div>
+                <p style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">【評価の意図】${escapeHTML(cat.intent)}</p>
+                ${cat.levels.map(lv => `
+                    <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; margin-bottom:6px; background:var(--bg); border-radius:8px; cursor:pointer; border:2px solid ${scouterChecks[lv.id] ? 'var(--primary)' : 'transparent'}; transition:border 0.2s;" id="scouter-label-${lv.id}">
+                        <input type="radio" name="scouter-${cat.id}" value="${lv.id}" ${scouterChecks[lv.id] ? 'checked' : ''}
+                            onchange="onScouterCheck('${cat.id}', '${lv.id}', ${lv.points})"
+                            style="margin-top:3px; width:18px; height:18px; accent-color:var(--primary); flex-shrink:0;">
+                        <div>
+                            <div style="font-weight:600; font-size:14px; margin-bottom:2px;">${escapeHTML(lv.label)}</div>
+                            <div style="font-size:13px; color:var(--text-secondary); line-height:1.5;">${escapeHTML(lv.desc)}</div>
+                        </div>
+                    </label>
+                `).join('')}
+                ${cat.bonus ? `
+                    <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; margin-top:8px; background:linear-gradient(135deg, #fff5f5, #fff0e6); border-radius:8px; cursor:pointer; border:2px solid ${scouterChecks[cat.bonus.id] ? '#e17055' : 'transparent'}; transition:border 0.2s;" id="scouter-label-${cat.bonus.id}">
+                        <input type="checkbox" value="${cat.bonus.id}" ${scouterChecks[cat.bonus.id] ? 'checked' : ''}
+                            onchange="onScouterBonusCheck('${cat.id}', '${cat.bonus.id}', ${cat.bonus.points}, this.checked)"
+                            style="margin-top:3px; width:18px; height:18px; accent-color:#e17055; flex-shrink:0;">
+                        <div>
+                            <div style="font-weight:600; font-size:14px; margin-bottom:2px; color:#e17055;">${escapeHTML(cat.bonus.label)}</div>
+                            <div style="font-size:13px; color:var(--text-secondary); line-height:1.5;">${escapeHTML(cat.bonus.desc)}</div>
+                        </div>
+                    </label>
+                ` : ''}
+            </div>`;
+        }).join('');
+
+        updateScouterTotal();
+    }
+
+    function onScouterCheck(catId, lvId, points) {
+        // Clear previous level selections for this category
+        const cat = scouterCategories.find(c => c.id === catId);
+        if (cat) {
+            cat.levels.forEach(lv => { delete scouterChecks[lv.id]; });
+        }
+        scouterChecks[lvId] = points;
+        // Update label borders
+        if (cat) {
+            cat.levels.forEach(lv => {
+                const label = document.getElementById('scouter-label-' + lv.id);
+                if (label) label.style.borderColor = scouterChecks[lv.id] ? 'var(--primary)' : 'transparent';
+            });
+        }
+        updateScouterTotal();
+    }
+
+    function onScouterBonusCheck(catId, bonusId, points, checked) {
+        if (checked) {
+            scouterChecks[bonusId] = points;
+        } else {
+            delete scouterChecks[bonusId];
+        }
+        const label = document.getElementById('scouter-label-' + bonusId);
+        if (label) label.style.borderColor = checked ? '#e17055' : 'transparent';
+        updateScouterTotal();
+    }
+
+    function updateScouterTotal() {
+        let total = 0;
+        Object.values(scouterChecks).forEach(p => { total += p; });
+
+        const scoreEl = document.getElementById('scouter-total-score');
+        const barEl = document.getElementById('scouter-bar');
+        const rankEl = document.getElementById('scouter-rank');
+        if (scoreEl) scoreEl.textContent = total;
+        if (barEl) barEl.style.width = Math.min((total / 120) * 100, 100) + '%';
+
+        // Rank
+        let rank = '';
+        if (total >= 110) rank = '🏆 S級 — エースIS';
+        else if (total >= 90) rank = '🔥 A級 — 即戦力IS';
+        else if (total >= 70) rank = '💪 B級 — 成長中IS';
+        else if (total >= 50) rank = '📈 C級 — 基礎固め中';
+        else if (total >= 30) rank = '🌱 D級 — スタートライン';
+        else rank = '🥚 E級 — これからの伸びしろ∞';
+        if (rankEl) rankEl.textContent = rank;
+
+        // Update per-category scores
+        scouterCategories.forEach(cat => {
+            let catScore = 0;
+            cat.levels.forEach(lv => { if (scouterChecks[lv.id]) catScore += scouterChecks[lv.id]; });
+            if (cat.bonus && scouterChecks[cat.bonus.id]) catScore += scouterChecks[cat.bonus.id];
+            const maxTotal = cat.maxBase + cat.maxBonus;
+            const el = document.getElementById('cat-score-' + cat.id);
+            if (el) el.textContent = catScore + ' / ' + maxTotal + '点';
+        });
+    }
+
+    function saveScouterToFirebase() {
+        if (!currentUser) { alert('ログインしてください'); return; }
+        // Save to localStorage
+        try {
+            localStorage.setItem('teleapo-scouter-' + currentUser, JSON.stringify(scouterChecks));
+        } catch(e) {}
+        // Save to Firebase under user
+        if (firebaseReady && db) {
+            let total = 0;
+            Object.values(scouterChecks).forEach(p => { total += p; });
+            db.ref('users/' + encodeURIComponent(currentUser) + '/scouter').set({
+                checks: scouterChecks,
+                total: total,
+                updatedAt: new Date().toISOString()
+            }).then(function() {
+                alert('戦闘力を保存しました！チームタブで全員の戦闘力を確認できます 💪');
+            }).catch(function(e) {
+                console.error('Scouter save error:', e);
+                alert('保存しました（ローカル）');
+            });
+        } else {
+            alert('保存しました（ローカル）');
+        }
+    }
+
+    function loadScouterFromLocal() {
+        if (!currentUser) return;
+        try {
+            const saved = localStorage.getItem('teleapo-scouter-' + currentUser);
+            if (saved) {
+                scouterChecks = JSON.parse(saved);
+            }
+        } catch(e) {}
+    }
+
+    function resetScouter() {
+        if (!confirm('戦闘力スカウターをリセットしますか？')) return;
+        scouterChecks = {};
+        renderScouter();
+    }
 
     // ===== GROWTH SUPPORT =====
     function getNextAction(stats) {
@@ -3483,6 +3748,57 @@
                 '</div>';
             }
         }
+
+        // チーム戦闘力ランキング
+        renderTeamScouter(firebaseData);
+    }
+
+    function renderTeamScouter(firebaseData) {
+        var el = document.getElementById('team-scouter-ranking');
+        if (!el) return;
+        var rankings = [];
+        if (firebaseData) {
+            Object.keys(firebaseData).forEach(function(key) {
+                try {
+                    var ud = firebaseData[key];
+                    var name = ud.name || decodeURIComponent(key);
+                    if (ud.scouter && ud.scouter.total !== undefined) {
+                        rankings.push({ name: name, total: ud.scouter.total, updatedAt: ud.scouter.updatedAt || '' });
+                    }
+                } catch(e) {}
+            });
+        }
+        rankings.sort(function(a, b) { return b.total - a.total; });
+
+        if (rankings.length === 0) {
+            el.innerHTML = '<p style="text-align:center; color:var(--text-secondary); padding:20px;">まだ誰も戦闘力を保存していません。戦闘力タブでチェックして保存しよう！</p>';
+            return;
+        }
+
+        el.innerHTML = rankings.map(function(r, i) {
+            var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
+            var pct = Math.min((r.total / 120) * 100, 100);
+            var rank = '';
+            if (r.total >= 110) rank = 'S級';
+            else if (r.total >= 90) rank = 'A級';
+            else if (r.total >= 70) rank = 'B級';
+            else if (r.total >= 50) rank = 'C級';
+            else if (r.total >= 30) rank = 'D級';
+            else rank = 'E級';
+            var isCurrent = r.name === currentUser;
+            return '<div style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:' + (isCurrent ? 'var(--primary-light)' : 'var(--bg)') + '; border-radius:8px; margin-bottom:8px; border:' + (isCurrent ? '2px solid var(--primary)' : '1px solid var(--border)') + ';">' +
+                '<span style="font-size:20px; min-width:32px; text-align:center;">' + medal + '</span>' +
+                '<div style="flex:1;">' +
+                    '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">' +
+                        '<span style="font-weight:600;">' + escapeHTML(r.name) + '</span>' +
+                        '<span style="font-weight:700; color:var(--primary);">' + r.total + '点 <span style="font-size:12px; color:var(--text-secondary);">(' + rank + ')</span></span>' +
+                    '</div>' +
+                    '<div style="background:var(--border); border-radius:6px; height:8px; overflow:hidden;">' +
+                        '<div style="height:100%; background:linear-gradient(90deg, var(--primary), #6c5ce7); border-radius:6px; width:' + pct + '%;"></div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
     }
 
     function switchTeamMonth(monthKey) {
@@ -4341,6 +4657,8 @@
         renderDigCategories();
         renderDig();
         renderObjections();
+        loadScouterFromLocal();
+        renderScouter();
         renderDashboard();
         renderTeam();
         renderScripts();
