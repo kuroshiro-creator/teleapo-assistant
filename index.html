@@ -3009,9 +3009,18 @@
         if (firebaseReady && db) {
             let total = 0;
             Object.values(scouterChecks).forEach(p => { total += p; });
+            // カテゴリ別スコアを算出
+            var catScores = {};
+            scouterCategories.forEach(function(cat) {
+                var catScore = 0;
+                cat.levels.forEach(function(lv) { if (scouterChecks[lv.id]) catScore += scouterChecks[lv.id]; });
+                if (cat.bonus && scouterChecks[cat.bonus.id]) catScore += scouterChecks[cat.bonus.id];
+                catScores[cat.id] = { score: catScore, max: cat.maxBase + cat.maxBonus, title: cat.title };
+            });
             db.ref('users/' + encodeURIComponent(currentUser) + '/scouter').set({
                 checks: scouterChecks,
                 total: total,
+                catScores: catScores,
                 updatedAt: new Date().toISOString()
             }).then(function() {
                 renderTeam();
@@ -3778,7 +3787,13 @@
                     var ud = firebaseData[key];
                     var name = ud.name || decodeURIComponent(key);
                     if (ud.scouter && ud.scouter.total !== undefined) {
-                        rankings.push({ name: name, total: ud.scouter.total, updatedAt: ud.scouter.updatedAt || '' });
+                        rankings.push({
+                            name: name,
+                            total: ud.scouter.total,
+                            catScores: ud.scouter.catScores || null,
+                            checks: ud.scouter.checks || {},
+                            updatedAt: ud.scouter.updatedAt || ''
+                        });
                     }
                 } catch(e) {}
             });
@@ -3789,6 +3804,12 @@
             el.innerHTML = '<p style="text-align:center; color:var(--text-secondary); padding:20px;">まだ誰も戦闘力を保存していません。戦闘力タブでチェックして保存しよう！</p>';
             return;
         }
+
+        // カテゴリの短縮名
+        var catShortNames = {
+            cat1: '準備', cat2: 'ヒアリング', cat3: '興味付け',
+            cat4: '価値訴求', cat5: 'QA対応', cat6: 'クロージング', cat7: '記録'
+        };
 
         el.innerHTML = rankings.map(function(r, i) {
             var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
@@ -3801,19 +3822,79 @@
             else if (r.total >= 30) rank = 'D級';
             else rank = 'E級';
             var isCurrent = r.name === currentUser;
-            return '<div style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:' + (isCurrent ? 'var(--primary-light)' : 'var(--bg)') + '; border-radius:8px; margin-bottom:8px; border:' + (isCurrent ? '2px solid var(--primary)' : '1px solid var(--border)') + ';">' +
-                '<span style="font-size:20px; min-width:32px; text-align:center;">' + medal + '</span>' +
-                '<div style="flex:1;">' +
-                    '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">' +
-                        '<span style="font-weight:600;">' + escapeHTML(r.name) + '</span>' +
-                        '<span style="font-weight:700; color:var(--primary);">' + r.total + '点 <span style="font-size:12px; color:var(--text-secondary);">(' + rank + ')</span></span>' +
-                    '</div>' +
-                    '<div style="background:var(--border); border-radius:6px; height:8px; overflow:hidden;">' +
-                        '<div style="height:100%; background:linear-gradient(90deg, var(--primary), #6c5ce7); border-radius:6px; width:' + pct + '%;"></div>' +
+            var uid = 'scouter-detail-' + i;
+
+            // カテゴリ別の内訳を構築
+            var detailHtml = '';
+            if (r.catScores) {
+                var catIds = ['cat1','cat2','cat3','cat4','cat5','cat6','cat7'];
+                detailHtml = '<div id="' + uid + '" style="display:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">' +
+                    catIds.map(function(cid) {
+                        var cs = r.catScores[cid];
+                        if (!cs) return '';
+                        var catPct = cs.max > 0 ? Math.round((cs.score / cs.max) * 100) : 0;
+                        var barColor = catPct >= 80 ? '#00b894' : catPct >= 50 ? '#fdcb6e' : '#e17055';
+                        return '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">' +
+                            '<span style="font-size:12px; min-width:80px; color:var(--text-secondary);">' + (catShortNames[cid] || cid) + '</span>' +
+                            '<div style="flex:1; background:var(--border); border-radius:4px; height:6px; overflow:hidden;">' +
+                                '<div style="height:100%; background:' + barColor + '; border-radius:4px; width:' + catPct + '%;"></div>' +
+                            '</div>' +
+                            '<span style="font-size:12px; font-weight:600; min-width:50px; text-align:right;">' + cs.score + '/' + cs.max + '</span>' +
+                        '</div>';
+                    }).join('') +
+                '</div>';
+            } else {
+                // catScoresがない古いデータ → checksから再計算
+                var catIds2 = ['cat1','cat2','cat3','cat4','cat5','cat6','cat7'];
+                var builtDetails = catIds2.map(function(cid) {
+                    var cat = scouterCategories.find(function(c) { return c.id === cid; });
+                    if (!cat) return '';
+                    var catScore = 0;
+                    cat.levels.forEach(function(lv) { if (r.checks[lv.id]) catScore += r.checks[lv.id]; });
+                    if (cat.bonus && r.checks[cat.bonus.id]) catScore += r.checks[cat.bonus.id];
+                    var catMax = cat.maxBase + cat.maxBonus;
+                    var catPct2 = catMax > 0 ? Math.round((catScore / catMax) * 100) : 0;
+                    var barColor2 = catPct2 >= 80 ? '#00b894' : catPct2 >= 50 ? '#fdcb6e' : '#e17055';
+                    return '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">' +
+                        '<span style="font-size:12px; min-width:80px; color:var(--text-secondary);">' + (catShortNames[cid] || cid) + '</span>' +
+                        '<div style="flex:1; background:var(--border); border-radius:4px; height:6px; overflow:hidden;">' +
+                            '<div style="height:100%; background:' + barColor2 + '; border-radius:4px; width:' + catPct2 + '%;"></div>' +
+                        '</div>' +
+                        '<span style="font-size:12px; font-weight:600; min-width:50px; text-align:right;">' + catScore + '/' + catMax + '</span>' +
+                    '</div>';
+                }).join('');
+                detailHtml = '<div id="' + uid + '" style="display:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">' + builtDetails + '</div>';
+            }
+
+            return '<div style="background:' + (isCurrent ? 'var(--primary-light)' : 'var(--bg)') + '; border-radius:8px; margin-bottom:8px; border:' + (isCurrent ? '2px solid var(--primary)' : '1px solid var(--border)') + '; overflow:hidden;">' +
+                '<div onclick="toggleScouterDetail(\'' + uid + '\', this)" style="display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer;">' +
+                    '<span style="font-size:20px; min-width:32px; text-align:center;">' + medal + '</span>' +
+                    '<div style="flex:1;">' +
+                        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">' +
+                            '<span style="font-weight:600;">' + escapeHTML(r.name) + '</span>' +
+                            '<div style="display:flex; align-items:center; gap:6px;">' +
+                                '<span style="font-weight:700; color:var(--primary);">' + r.total + '点 <span style="font-size:12px; color:var(--text-secondary);">(' + rank + ')</span></span>' +
+                                '<span class="scouter-toggle-arrow" style="font-size:12px; color:var(--text-secondary); transition:transform 0.2s;">▼</span>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div style="background:var(--border); border-radius:6px; height:8px; overflow:hidden;">' +
+                            '<div style="height:100%; background:linear-gradient(90deg, var(--primary), #6c5ce7); border-radius:6px; width:' + pct + '%;"></div>' +
+                        '</div>' +
                     '</div>' +
                 '</div>' +
+                '<div style="padding:0 16px;">' + detailHtml + '</div>' +
             '</div>';
         }).join('');
+    }
+
+    function toggleScouterDetail(uid, headerEl) {
+        var detail = document.getElementById(uid);
+        if (!detail) return;
+        var isOpen = detail.style.display !== 'none';
+        detail.style.display = isOpen ? 'none' : 'block';
+        // 矢印の回転
+        var arrow = headerEl.querySelector('.scouter-toggle-arrow');
+        if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
     }
 
     function switchTeamMonth(monthKey) {
