@@ -3003,6 +3003,10 @@
             const el = document.getElementById('cat-score-' + cat.id);
             if (el) el.textContent = catScore + ' / ' + maxTotal + '点';
         });
+        // 自動保存（変更のたびにlocalStorageへ）
+        if (currentUser) {
+            try { localStorage.setItem('teleapo-scouter-' + currentUser, JSON.stringify(scouterChecks)); } catch(e) {}
+        }
     }
 
     function saveScouterToFirebase() {
