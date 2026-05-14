@@ -1375,7 +1375,30 @@
         <div id="tab-others2" class="tab-content">
             <h2 style="margin-bottom:16px; font-size:18px;">📁 その他２</h2>
             <div style="background:var(--card); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); border:1px solid var(--border);">
-                <p style="color:var(--text-secondary); font-size:14px;">ここに追加したい内容を入れられます。</p>
+                <h3 style="margin-bottom:14px; font-size:16px;">💰 アポ単価計算</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>時給（円）</label>
+                        <input type="number" id="others2-hourly-rate" min="0" value="0" oninput="calculateOthers2UnitCost()">
+                    </div>
+                    <div class="form-group">
+                        <label>稼働時間（時間）</label>
+                        <input type="number" id="others2-working-hours" min="0" step="0.5" value="0" oninput="calculateOthers2UnitCost()">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>アポ数</label>
+                        <input type="number" id="others2-appointment-count" min="0" value="0" oninput="calculateOthers2UnitCost()">
+                    </div>
+                    <div class="form-group">
+                        <label>アポ単価（円）</label>
+                        <input type="text" id="others2-unit-cost" value="0" readonly>
+                    </div>
+                </div>
+                <div id="others2-cost-summary" style="margin-top:12px; padding:14px 16px; background:var(--primary-light); border-radius:8px; color:var(--primary); font-size:14px; font-weight:600;">
+                    時給・稼働時間・アポ数を入力すると、アポ単価が自動で出ます。
+                </div>
             </div>
         </div>
     </div>
@@ -4583,6 +4606,48 @@
         return div.innerHTML;
     }
 
+    function loadOthers2Inputs() {
+        try {
+            const data = JSON.parse(localStorage.getItem('teleapo-others2-cost') || '{}');
+            const hourlyRate = document.getElementById('others2-hourly-rate');
+            const workingHours = document.getElementById('others2-working-hours');
+            const appointmentCount = document.getElementById('others2-appointment-count');
+            if (hourlyRate && data.hourlyRate !== undefined) hourlyRate.value = data.hourlyRate;
+            if (workingHours && data.workingHours !== undefined) workingHours.value = data.workingHours;
+            if (appointmentCount && data.appointmentCount !== undefined) appointmentCount.value = data.appointmentCount;
+            calculateOthers2UnitCost();
+        } catch(e) {
+            console.error('Error loading その他２ inputs:', e);
+        }
+    }
+
+    function calculateOthers2UnitCost() {
+        const hourlyRate = Number(document.getElementById('others2-hourly-rate')?.value || 0);
+        const workingHours = Number(document.getElementById('others2-working-hours')?.value || 0);
+        const appointmentCount = Number(document.getElementById('others2-appointment-count')?.value || 0);
+        const totalCost = hourlyRate * workingHours;
+        const unitCost = appointmentCount > 0 ? Math.round(totalCost / appointmentCount) : 0;
+
+        const unitCostEl = document.getElementById('others2-unit-cost');
+        if (unitCostEl) unitCostEl.value = unitCost.toLocaleString('ja-JP');
+
+        const summaryEl = document.getElementById('others2-cost-summary');
+        if (summaryEl) {
+            summaryEl.textContent = appointmentCount > 0
+                ? '総コスト ' + Math.round(totalCost).toLocaleString('ja-JP') + '円 ÷ アポ数 ' + appointmentCount + '件 = アポ単価 ' + unitCost.toLocaleString('ja-JP') + '円'
+                : 'アポ数を入力すると、アポ単価が自動で出ます。';
+        }
+
+        try {
+            localStorage.setItem('teleapo-others2-cost', JSON.stringify({
+                hourlyRate,
+                workingHours,
+                appointmentCount,
+                unitCost
+            }));
+        } catch(e) {}
+    }
+
     function renderComments() {
         try {
             let comments = JSON.parse(localStorage.getItem('teleapo-comments') || '[]');
@@ -4781,6 +4846,7 @@
         renderScripts();
         renderComments();
         renderAdviceList();
+        loadOthers2Inputs();
         renderMotivation();
     })();
     </script>
